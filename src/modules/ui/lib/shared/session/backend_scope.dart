@@ -43,7 +43,13 @@ class BackendScope extends InheritedNotifier<BackendLink> {
   }
 
   static ApiClient clientOf(BuildContext context) {
-    final client = linkOf(context).value;
+    final scope = context.getInheritedWidgetOfExactType<BackendScope>();
+
+    if (scope == null) {
+      throw StateError('No BackendScope above this widget');
+    }
+
+    final client = scope.notifier!.value;
 
     if (client == null) {
       throw StateError('The backend is not connected yet');
