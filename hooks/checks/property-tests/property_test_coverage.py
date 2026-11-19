@@ -11,6 +11,8 @@ SOURCE_DIRECTORY = "src"
 TESTS_DIRECTORY = "tests"
 TEST_PREFIX = "test_"
 PROPERTY_MARKER = "_property"
+MODULES_DIRECTORY = "modules"
+MODULE_ROOT_DEPTH = 2
 
 
 class UntestedDefinition(NamedTuple):
@@ -28,7 +30,10 @@ class ServiceName:
     def of(self, path: Path) -> str:
         parts = path.parts
 
-        if TESTS_DIRECTORY in parts:
+        if MODULES_DIRECTORY in parts:
+            modules_index = parts.index(MODULES_DIRECTORY)
+            boundary = modules_index + MODULE_ROOT_DEPTH
+        elif TESTS_DIRECTORY in parts:
             boundary = parts.index(TESTS_DIRECTORY)
         else:
             boundary = parts.index(SOURCE_DIRECTORY)

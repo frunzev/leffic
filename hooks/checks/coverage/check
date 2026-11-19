@@ -11,9 +11,16 @@ if [ -n "$services" ]; then
     require_binary "$python_binary" python
 
     for service in $services; do
+        coverage_targets=""
+
+        for service_entry in $(service_sources "$service"); do
+            coverage_target=$(basename "$service_entry" .py)
+            coverage_targets="$coverage_targets --cov=$coverage_target"
+        done
+
         (cd "$service" && "$python_binary" -m pytest tests -q \
             -p randomly \
-            --cov=src \
+            $coverage_targets \
             --cov-branch \
             --cov-report=term-missing:skip-covered \
             --cov-fail-under="$minimum_coverage")

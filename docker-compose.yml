@@ -14,7 +14,7 @@ x-user-service-environment: &user-service-environment
   - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
 
 x-content-service: &content-service
-  build: ./content-management-service
+  build: ./src/modules/content-management-service
   environment:
     - CM_DB_USER=postgres
     - CM_DB_PASS=postgres
@@ -34,17 +34,8 @@ x-content-service: &content-service
   restart: unless-stopped
 
 services:
-  frontend:
-    build:
-      context: ./ui-service
-      args:
-        - VITE_GATEWAY_URL=${VITE_GATEWAY_URL:-http://localhost:8888}
-    ports:
-      - "3009:8080"
-    restart: unless-stopped
-
   api-gateway:
-    build: ./api-gateway
+    build: ./src/modules/api-gateway
     ports:
       - 8888:8080
     environment:
@@ -71,7 +62,7 @@ services:
   content-documents:
     <<: *content-service
     build:
-      context: ./content-management-service
+      context: ./src/modules/content-management-service
       dockerfile: Dockerfile.documents
     volumes:
       - files:/app/files
@@ -89,7 +80,7 @@ services:
     command: python run_consumer.py
 
   user-migrations:
-    build: ./user-service
+    build: ./src/modules/user-service
     environment: *user-service-environment
     command: alembic upgrade head
     restart: "no"
@@ -98,7 +89,7 @@ services:
         condition: service_healthy
 
   user-service:
-    build: ./user-service
+    build: ./src/modules/user-service
     environment: *user-service-environment
     depends_on:
       user-migrations:

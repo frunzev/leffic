@@ -14,9 +14,13 @@ from srp_metrics import THRESHOLD, CallableFacts, callable_score
 from srp_whitelist import DEFAULT_WHITELIST, apply_whitelist, read_whitelist
 
 
-def report_for(path: str, facts: list[CallableFacts], owners: list[dict]) -> dict:
+def report_for(
+    path: str, facts: list[CallableFacts], owners: list[dict]
+) -> dict:
     units = [callable_score(item) for item in facts if not item.client_only]
-    units.extend(owner_score({**owner, "path": path}, facts) for owner in owners)
+    units.extend(
+        owner_score({**owner, "path": path}, facts) for owner in owners
+    )
     units.sort(key=lambda unit: (unit["line"], unit["name"], unit["kind"]))
     return {
         "path": path,
@@ -25,6 +29,21 @@ def report_for(path: str, facts: list[CallableFacts], owners: list[dict]) -> dic
             default=0.0,
         ),
         "units": units,
+    }
+
+
+def python_file_facts(path: Path) -> dict:
+    exports: dict = {}
+    try:
+        facts, owners = python_facts(path, exports)
+    except RecursionError as error:
+        message = f"{path}: code is nested too deeply to analyze"
+        raise ValueError(message) from error
+    return {
+        "path": str(path),
+        "facts": facts,
+        "owners": owners,
+        "exports": exports,
     }
 
 
@@ -37,27 +56,21 @@ def analyze(
     tsconfig=None,
     whitelist=None,
 ) -> dict:
-    whitelist_path = Path(whitelist) if whitelist is not None else DEFAULT_WHITELIST
+    whitelist_path = (
+        Path(whitelist) if whitelist is not None else DEFAULT_WHITELIST
+    )
     exceptions = read_whitelist(whitelist_path)
     source_roots = [Path(root).resolve() for root in source_roots]
     if any(not root.is_dir() for root in source_roots):
         raise ValueError("every --source-root must be an existing directory")
     scan_roots = [Path(root).resolve() for root in scan_roots]
     if not scan_roots and paths:
-        scan_roots = [Path(commonpath([path.resolve().parent for path in paths]))]
-    parsed_files = []
-    for path in paths:
-        if path.suffix == ".py":
-            exports = {}
-            facts, owners = python_facts(path, exports)
-            parsed_files.append(
-                {
-                    "path": str(path),
-                    "facts": facts,
-                    "owners": owners,
-                    "exports": exports,
-                }
-            )
+        scan_roots = [
+            Path(commonpath([path.resolve().parent for path in paths]))
+        ]
+    parsed_files = [
+        python_file_facts(path) for path in paths if path.suffix == ".py"
+    ]
     for parsed in typescript_facts(
         [path for path in paths if path.suffix in SUFFIXES - {".py"}],
         node,
@@ -67,7 +80,9 @@ def analyze(
         facts = [CallableFacts(**item) for item in parsed["callables"]]
         parsed_files.append({**parsed, "facts": facts})
     for item in parsed_files:
-        item["root"] = str(source_root(Path(item["path"]), scan_roots, source_roots))
+        item["root"] = str(
+            source_root(Path(item["path"]), scan_roots, source_roots)
+        )
     effects = effect_call_graph(parsed_files)
     resolve_call_aliases(parsed_files)
     summarize_effects(parsed_files, effects)
@@ -106,7 +121,8 @@ def print_report(report: dict) -> None:
             print(
                 f"{file['path']}:{unit['line']}: {unit['name']} has "
                 f"{len(unit['entities'])} reasons to change "
-                f"({', '.join(unit['entities'])}): " + "; ".join(unit["reasons"]),
+                f"({', '.join(unit['entities'])}): "
+                + "; ".join(unit["reasons"]),
                 file=sys.stderr,
             )
     if report["failed"]:
@@ -127,26 +143,28 @@ def main() -> int:
     )
     parser.add_argument("paths", nargs="*", help="source files or directories")
     parser.add_argument(
-        "--json", action="store_true", help="report every unit and its evidence"
+        "--json",
+        action="store_true",
+        help="report every unit and its evidence",
     )
     parser.add_argument("--node", default="node")
     parser.add_argument(
         "--whitelist",
-        help="reviewed exceptions file; defaults to whitelist.txt beside this check",
+        help="reviewed exceptions file; default: whitelist.txt here",
     )
     parser.add_argument(
         "--source-root",
         action="append",
         default=[],
-        help="explicit import root for a namespace or nonstandard source layout; repeatable",
+        help="explicit import root for a nonstandard layout; repeatable",
     )
     parser.add_argument(
         "--typescript",
-        help="installed TypeScript package directory; otherwise discovered locally",
+        help="installed TypeScript package directory; else discovered",
     )
     parser.add_argument(
         "--tsconfig",
-        help="explicit TypeScript config; otherwise discover the nearest tsconfig.json",
+        help="explicit TypeScript config; else the nearest tsconfig.json",
     )
     args = parser.parse_args()
     try:

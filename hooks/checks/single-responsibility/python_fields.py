@@ -1,5 +1,3 @@
-"""Resolve declared fields and straight-line constructor dependency assignments."""
-
 import ast
 
 from python_bindings import (
@@ -8,13 +6,17 @@ from python_bindings import (
     assigned_value,
     bind_assignment,
     local_bindings,
-    qualified,
+    returned_type_bindings,
     scope_nodes,
 )
+from python_qualified_names import qualified
 
 
-def class_fields(node: ast.ClassDef, inherited: dict[str, str]) -> dict[str, str]:
-    fields: dict[str, str] = {}
+def class_fields(
+    node: ast.ClassDef, inherited: dict[str, str]
+) -> dict[str, str]:
+    method_returned_types = returned_type_bindings(node, inherited)
+    fields: dict[str, str] = dict(method_returned_types)
     declared: set[str] = set()
     for statement in node.body:
         if isinstance(statement, ast.AnnAssign) and isinstance(
@@ -38,6 +40,8 @@ def class_fields(node: ast.ClassDef, inherited: dict[str, str]) -> dict[str, str
             continue
         receiver = positional[0].arg + "."
         bindings = local_bindings(method, inherited)
+        for returned_key, returned_type in method_returned_types.items():
+            bindings[receiver + returned_key] = returned_type
         for statement in method.body:
             bind_assignment(statement, bindings)
         for name, value in bindings.items():
@@ -47,7 +51,6 @@ def class_fields(node: ast.ClassDef, inherited: dict[str, str]) -> dict[str, str
                 and not value.startswith("local:")
             ):
                 fields.setdefault(name[len(receiver) :], value)
-    # A constructor inference is not stable if another path can replace it.
     for method in node.body:
         if not isinstance(method, FUNCTIONS):
             continue

@@ -42,7 +42,8 @@ lonely=""
 
 for service in $services; do
     lonely="$lonely
-$(python_files_in "$service/src" | "$python_binary" "$usage_finder")"
+$(python_files_in $(service_sources "$service") \
+    | "$python_binary" "$usage_finder")"
 done
 
 for node_package in $node_packages; do

@@ -1,29 +1,20 @@
-"""Python AST adapter; reading/parsing never executes application code."""
-
 import ast
-import tokenize
 from pathlib import Path
 
 from python_bindings import (
     FUNCTIONS,
-    SCOPES,
     bound_names,
     imports_in,
     local_bindings,
+    module_bindings,
     qualified,
     scope_nodes,
 )
+from python_definition_time import collect_definition_body, direct_scopes
 from python_fields import class_fields
 from python_metrics import RuntimeMetrics
+from python_parsing import parse_python_module
 from srp_metrics import CallableFacts
-
-
-def direct_scopes(node: ast.AST):
-    for child in ast.iter_child_nodes(node):
-        if isinstance(child, SCOPES):
-            yield child
-        else:
-            yield from direct_scopes(child)
 
 
 def scope_name(node: ast.AST) -> str:
@@ -45,17 +36,21 @@ def collect_scope(
     replaced_names = {
         child.id
         for child in scope_nodes(node)
-        if isinstance(child, ast.Name) and isinstance(child.ctx, (ast.Store, ast.Del))
+        if isinstance(child, ast.Name)
+        and isinstance(child.ctx, (ast.Store, ast.Del))
     }
     visible = dict(visible or {})
     if not isinstance(node, ast.ClassDef):
         visible.update(
             (child.name, f"{owner}.{child.name}")
             for child in scopes
-            if isinstance(child, FUNCTIONS) and child.name not in replaced_names
+            if isinstance(child, FUNCTIONS)
+            and child.name not in replaced_names
         )
     visible = {
-        key: value for key, value in visible.items() if key not in replaced_names
+        key: value
+        for key, value in visible.items()
+        if key not in replaced_names
     }
     member_names = {
         scope_name(child)
@@ -63,7 +58,9 @@ def collect_scope(
         if not isinstance(child, ast.ClassDef)
         and scope_name(child) not in replaced_names
     }
-    fields = class_fields(node, inherited) if isinstance(node, ast.ClassDef) else {}
+    fields = (
+        class_fields(node, inherited) if isinstance(node, ast.ClassDef) else {}
+    )
     for child in scopes:
         name = f"{owner}.{scope_name(child)}"
         bindings = local_bindings(child, inherited)
@@ -72,7 +69,16 @@ def collect_scope(
             key: value for key, value in visible.items() if key not in shadowed
         }
         if isinstance(child, ast.ClassDef):
-            owners.append({"name": name, "line": child.lineno, "kind": "class"})
+            owners.append(
+                {"name": name, "line": child.lineno, "kind": "class"}
+            )
+            class_body = CallableFacts(
+                f"{name}.<class-body>", child.lineno, name, client_only=True
+            )
+            collector = RuntimeMetrics(
+                class_body, dict(bindings), globals_, set(), set()
+            )
+            facts.append(collect_definition_body(collector, child))
         else:
             arguments = child.args
             parameters = (
@@ -119,12 +125,14 @@ def collect_scope(
             replaced = parameter_names | {
                 value.id
                 for value in scope_nodes(child)
-                if isinstance(value, ast.Name) and isinstance(value.ctx, ast.Store)
+                if isinstance(value, ast.Name)
+                and isinstance(value.ctx, ast.Store)
             }
             available.update(
                 (nested.name, f"{name}.{nested.name}")
                 for nested in direct_scopes(child)
-                if isinstance(nested, FUNCTIONS) and nested.name not in replaced
+                if isinstance(nested, FUNCTIONS)
+                and nested.name not in replaced
             )
             collector = RuntimeMetrics(
                 item,
@@ -146,15 +154,16 @@ def collect_scope(
             for statement in body:
                 collector.statement(statement)
             facts.append(collector.finish())
-        collect_scope(child, name, bindings, globals_, facts, owners, available)
+        collect_scope(
+            child, name, bindings, globals_, facts, owners, available
+        )
 
 
 def python_facts(
     path: Path, exports: dict | None = None
 ) -> tuple[list[CallableFacts], list[dict]]:
-    with tokenize.open(path) as source:
-        tree = ast.parse(source.read(), filename=str(path))
-    bindings = {"open": "builtins.open", **imports_in(tree)}
+    tree = parse_python_module(path)
+    bindings = module_bindings(tree)
     globals_: set[str] = set()
     for statement in tree.body:
         if isinstance(statement, (ast.Assign, ast.AnnAssign, ast.TypeAlias)):
@@ -165,11 +174,9 @@ def python_facts(
             bindings.pop(statement.name, None)
     facts: list[CallableFacts] = []
     owners = [{"name": "<module>", "line": 1, "kind": "module"}]
-    body = CallableFacts("<module-body>", 1, "", client_only=True)
+    body = CallableFacts("<module-body>", 1, "<module>", client_only=True)
     collector = RuntimeMetrics(body, dict(bindings), globals_, set(), set())
-    for statement in tree.body:
-        collector.statement(statement)
-    facts.append(collector.finish())
+    facts.append(collect_definition_body(collector, tree))
     if exports is not None:
         declarations = {
             statement.name
@@ -184,7 +191,6 @@ def python_facts(
                 exports[name] = {"reference": value}
             elif value.removeprefix("local:") in declarations:
                 exports[name] = "<module>." + value.removeprefix("local:")
-    # Unresolved module values remain globals, not function-local shadows.
     bindings = {
         name: value
         for name, value in collector.bindings.items()

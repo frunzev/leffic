@@ -12,11 +12,11 @@ Ranked from the best enforced to the least.
 | --- | --- | --- |
 | Single Responsibility Principle | `single-responsibility` (SRP coefficient >= 0.5 blocks), `file-length` (max 300 lines), `definition-names` (no `and`/`or` in a name), `nested-definitions` | High |
 | YAGNI | `dead-code` (vulture), `unused-deps` (deptry, knip), `feature-isolation` (shared needs two owners) | High |
-| Type safety - make illegal states unrepresentable | `strict-typing` (basedpyright `typeCheckingMode = "all"`, `npm run typecheck`), `linters` (eslint `strictTypeChecked`) | High |
+| Type safety - make illegal states unrepresentable | `strict-typing` (basedpyright `typeCheckingMode = "all"`, `npm run typecheck`), `linters` (eslint `strictTypeChecked`), `flutter` (`flutter analyze --fatal-infos` with strict casts, inference and raw types) | High |
 | Modularity - high cohesion, low coupling | `feature-isolation` (siblings meet only in `shared`), `file-length`, `single-responsibility` | High |
 | Explicit dependencies | `unused-deps` (declare what you import, drop what you don't) | High |
 | Separation of config from code (Twelve-Factor III) | `secrets` (gitleaks over the staged diff) | High |
-| Testability - every unit reachable and exercised | `property-tests` (one `test_<function>_property_<guarantee>` per definition), `coverage` (100% branch, shuffled), `nested-definitions` | High |
+| Testability - every unit reachable and exercised | `flutter` (every Dart test), `property-tests` (one `test_<function>_property_<guarantee>` per definition), `coverage` (100% branch, shuffled), `nested-definitions` | High |
 | Robustness against untrusted input | `api-contract` (generated requests must not crash an endpoint), `security-patterns` (semgrep dataflow) | High |
 | Readability over cleverness | `linters` (ruff 79-column lines, import order, naming, no lambda bindings; pylint; eslint) | High |
 | Consistency - one obvious way to express a thing | `linters` (ruff `RET` returns, `FBT` flag arguments, `E711`/`E721` identity and type tests, `B006` mutable defaults) | High |

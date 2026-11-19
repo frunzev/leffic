@@ -24,8 +24,8 @@ def test_failure_names_the_construction_and_suggests_injection(
 ) -> None:
     repository(tmp_path)
     link_real_python(tmp_path)
-    stage_file(tmp_path, "user-service/src/repository.py", _REPOSITORY)
-    stage_file(tmp_path, "user-service/src/service.py", _SERVICE)
+    stage_file(tmp_path, "src/modules/user-service/features/repository.py", _REPOSITORY)
+    stage_file(tmp_path, "src/modules/user-service/features/service.py", _SERVICE)
     finished = run_check(tmp_path, "dependency-inversion")
 
     assert finished.returncode == 1
@@ -43,8 +43,8 @@ def test_passes_when_the_collaborator_is_injected(tmp_path: Path) -> None:
     )
     repository(tmp_path)
     link_real_python(tmp_path)
-    stage_file(tmp_path, "user-service/src/repository.py", _REPOSITORY)
-    stage_file(tmp_path, "user-service/src/service.py", injected)
+    stage_file(tmp_path, "src/modules/user-service/features/repository.py", _REPOSITORY)
+    stage_file(tmp_path, "src/modules/user-service/features/service.py", injected)
     finished = run_check(tmp_path, "dependency-inversion")
 
     assert finished.returncode == 0
@@ -55,8 +55,8 @@ def test_ignores_tests_outside_the_source_directories(
 ) -> None:
     repository(tmp_path)
     link_real_python(tmp_path)
-    stage_file(tmp_path, "user-service/src/repository.py", _REPOSITORY)
-    stage_file(tmp_path, "user-service/tests/test_service.py", _SERVICE)
+    stage_file(tmp_path, "src/modules/user-service/features/repository.py", _REPOSITORY)
+    stage_file(tmp_path, "src/modules/user-service/tests/test_service.py", _SERVICE)
     finished = run_check(tmp_path, "dependency-inversion")
 
     assert finished.returncode == 0

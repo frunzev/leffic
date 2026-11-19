@@ -2,8 +2,6 @@
 set -e
 . "$(dirname "$0")/../../_env.sh"
 
-# Starlette 1.x fixes these, but it needs FastAPI >= 0.140, which drops the
-# APIRoute class our wiring tests read. Lift them with that upgrade.
 accepted_advisories="PYSEC-2026-161 PYSEC-2026-248 PYSEC-2026-249
 PYSEC-2026-2280 PYSEC-2026-2281"
 
@@ -26,7 +24,7 @@ audit_python_environment() {
     require_binary "$pip_audit_binary" pip-audit
 
     echo "pre-commit: still carrying $(echo $accepted_advisories | wc -w |
-        tr -d ' ') accepted starlette advisories"
+        tr -d ' ') accepted starlette advisories until FastAPI 0.140"
 
     if audit_output=$("$pip_audit_binary" --progress-spinner off \
         $ignore_flags 2>&1); then

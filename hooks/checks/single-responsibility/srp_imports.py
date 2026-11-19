@@ -1,28 +1,49 @@
-"""Resolve explicit imports and re-exports against the files actually analyzed."""
-
 from pathlib import Path
 
+PYTHON_ROOT_MARKERS = ("pyproject.toml", "setup.cfg", "setup.py")
+TYPESCRIPT_ROOT_MARKERS = ("package.json", "tsconfig.json")
+SOURCE_DIRECTORY_NAME = "src"
+PACKAGE_MARKER = "__init__.py"
 
-def source_root(path: Path, scan_roots=(), explicit_roots=()) -> Path:
+
+def deepest_root(path: Path, roots: list[Path]) -> Path | None:
+    containing_roots = [root for root in roots if path.is_relative_to(root)]
+    if not containing_roots:
+        return None
+    return max(containing_roots, key=lambda root: len(root.parts))
+
+
+def is_marked_source_root(directory: Path, markers: tuple[str, ...]) -> bool:
+    if any((directory / marker).is_file() for marker in markers):
+        return True
+    is_package = (directory / PACKAGE_MARKER).is_file()
+    return directory.name == SOURCE_DIRECTORY_NAME and not is_package
+
+
+def source_root(
+    path: Path, scan_roots: list[Path], explicit_roots: list[Path]
+) -> Path:
     path = path.resolve()
-    matches = [root for root in explicit_roots if path.is_relative_to(root)]
-    if matches:
-        return max(matches, key=lambda root: len(root.parts))
+    explicit_root = deepest_root(path, explicit_roots)
+    if explicit_root is not None:
+        return explicit_root
+    scan_root = deepest_root(path, scan_roots) or path.parent
     markers = (
-        ("pyproject.toml", "setup.cfg", "setup.py")
+        PYTHON_ROOT_MARKERS
         if path.suffix == ".py"
-        else ("package.json", "tsconfig.json")
+        else TYPESCRIPT_ROOT_MARKERS
     )
     for parent in path.parents:
-        if parent.name == "src" or any((parent / name).is_file() for name in markers):
+        if not parent.is_relative_to(scan_root):
+            break
+        if is_marked_source_root(parent, markers):
             return parent
     package = path.parent
-    while (package / "__init__.py").is_file():
+    while package != scan_root and (package / PACKAGE_MARKER).is_file():
         package = package.parent
     if package != path.parent:
         return package
-    matches = [root for root in scan_roots if path.is_relative_to(root)]
-    return max(matches, key=lambda root: len(root.parts)) if matches else path.parent
+    return scan_root
 
 
 class ImportResolver:
@@ -35,8 +56,6 @@ class ImportResolver:
         }
         self.roots = {
             path: Path(item["root"]).resolve()
-            if item.get("root")
-            else source_root(Path(path))
             for path, item in self.files.items()
         }
         self.cache: dict[tuple[str, str], list[tuple[str, str]]] = {}
@@ -64,7 +83,9 @@ class ImportResolver:
             return candidates
         file = Path(path).resolve()
         if file.suffix != ".py":
-            for module, resolved in self.files[path].get("modules", {}).items():
+            for module, resolved in (
+                self.files[path].get("modules", {}).items()
+            ):
                 target = self.absolute.get(Path(resolved).resolve())
                 if target and reference.startswith(module + "."):
                     candidates.add((target, reference[len(module) + 1 :]))
@@ -82,7 +103,10 @@ class ImportResolver:
             if character != ".":
                 continue
             imported = root.joinpath(*reference[:index].split("."))
-            for alternative in (Path(str(imported) + ".py"), imported / "__init__.py"):
+            for alternative in (
+                Path(str(imported) + ".py"),
+                imported / "__init__.py",
+            ):
                 target = self.absolute.get(alternative.resolve())
                 if target and self.roots[target] == root:
                     candidates.add((target, reference[index + 1 :]))
@@ -111,5 +135,7 @@ class ImportResolver:
         candidates = set()
         if head != "default":
             for module in item.get("export_stars", []):
-                candidates.update(self.references(path, module + "." + symbol, seen))
+                candidates.update(
+                    self.references(path, module + "." + symbol, seen)
+                )
         return candidates

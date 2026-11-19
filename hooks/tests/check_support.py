@@ -8,7 +8,7 @@ from hypothesis import HealthCheck, settings
 HOOKS = Path(__file__).resolve().parent.parent
 REPOSITORY = HOOKS.parent
 IGNORED = "hooks/\n.venv/\n"
-NPM_PACKAGES = ("ui-service", "api-gateway")
+NPM_PACKAGES = ("api-gateway",)
 HOOK_OUTPUT_PREFIX = "pre-commit:"
 DOCKERIGNORE_PATTERNS = ("node_modules", "dist", "tests", ".DS_Store")
 HYPOTHESIS_SETTINGS = settings(

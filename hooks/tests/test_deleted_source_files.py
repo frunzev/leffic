@@ -9,9 +9,9 @@ from check_support import (
     stub_binary,
 )
 
-FEATURE_SOURCE = "user-service/src/features/notes/router.py"
-SIBLING_SOURCE = "user-service/src/features/tests/api.py"
-TEST_SOURCE = "user-service/tests/test_router.py"
+FEATURE_SOURCE = "src/modules/user-service/features/notes/router.py"
+SIBLING_SOURCE = "src/modules/user-service/features/tests/api.py"
+TEST_SOURCE = "src/modules/user-service/tests/test_router.py"
 
 
 def _committed_repository(tmp_path: Path) -> None:

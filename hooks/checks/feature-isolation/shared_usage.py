@@ -7,6 +7,9 @@ from typing import NamedTuple
 SHARED_PACKAGE = "shared"
 FEATURES_PACKAGE = "features"
 MINIMUM_FEATURES = 2
+SOURCE_DIRECTORY = "src"
+MODULES_DIRECTORY = "modules"
+MODULE_ROOT_DEPTH = 2
 
 
 class LonelyModule(NamedTuple):
@@ -17,11 +20,16 @@ class LonelyModule(NamedTuple):
 class ModuleName:
     def of(self, path: Path) -> str:
         parts = path.parts
-        index = parts.index("src")
-        trail = parts[index + 1 :]
+        trail = parts[self._root_end(parts) :]
         dotted = ".".join(trail).removesuffix(".py")
 
         return dotted.removesuffix(".__init__")
+
+    def _root_end(self, parts: tuple[str, ...]) -> int:
+        if MODULES_DIRECTORY in parts:
+            return parts.index(MODULES_DIRECTORY) + MODULE_ROOT_DEPTH
+
+        return parts.index(SOURCE_DIRECTORY) + 1
 
 
 class OwningFeature:

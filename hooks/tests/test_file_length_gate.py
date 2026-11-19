@@ -3,7 +3,7 @@ from pathlib import Path
 from check_support import repository, run_check, stage_file
 
 MAXIMUM = 300
-OVERLONG = "user-service/src/wide.py"
+OVERLONG = "src/modules/user-service/features/wide.py"
 
 
 def _numbered_lines(count: int) -> str:
@@ -48,7 +48,7 @@ def test_accepts_a_file_exactly_at_the_limit(tmp_path: Path) -> None:
 def test_reports_the_whole_name_of_a_file_containing_a_space(
     tmp_path: Path,
 ) -> None:
-    spaced = "user-service/src/wide module.py"
+    spaced = "src/modules/user-service/features/wide module.py"
     repository(tmp_path)
     stage_file(tmp_path, spaced, _numbered_lines(MAXIMUM + 1) + "\n")
     finished = run_check(tmp_path, "file-length")

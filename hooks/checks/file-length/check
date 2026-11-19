@@ -18,7 +18,9 @@ source_files=$(
         -name htmlcov -prune -o \
         -name '.*_cache' -prune -o \
         -name .hypothesis -prune -o \
-        -type f \( -name '*.py' -o -name '*.ts' -o -name '*.tsx' \) \
+        -name .dart_tool -prune -o \
+        -type f \( -name '*.py' -o -name '*.ts' -o -name '*.tsx' \
+            -o -name '*.dart' \) \
         -print \
         | sed 's|^\./||' \
         | sort

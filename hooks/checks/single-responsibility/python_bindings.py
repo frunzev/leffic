@@ -1,31 +1,28 @@
-"""Resolve explicit imports and simple aliases without guessing from names."""
-
 import ast
+from collections.abc import Iterator
+
+from python_qualified_names import annotation_type, qualified
+from srp_effects import is_catalogued_client
 
 SCOPES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)
 FUNCTIONS = (ast.FunctionDef, ast.AsyncFunctionDef)
+CLIENT_FACTORY_OPERATIONS = frozenset(
+    {
+        "open",
+        "connect",
+        "cursor",
+        "from_url",
+        "client",
+        "resource",
+        "create_engine",
+        "create_async_engine",
+        "create_connection",
+    }
+)
+RETURNED_TYPE_SUFFIX = "()"
 
 
-def qualified(node: ast.AST | None, bindings: dict[str, str] | None = None) -> str:
-    if isinstance(node, ast.Name):
-        return (
-            bindings.get(node.id, "local:" + node.id)
-            if bindings is not None
-            else node.id
-        )
-    if isinstance(node, ast.Attribute):
-        if bindings is not None and qualified(node) in bindings:
-            return bindings[qualified(node)]
-        base = qualified(node.value, bindings)
-        return f"{base}.{node.attr}" if base else ""
-    if isinstance(node, ast.Call):
-        return qualified(node.func, bindings)
-    if isinstance(node, ast.Subscript):
-        return qualified(node.value, bindings)
-    return ""
-
-
-def scope_nodes(node: ast.AST):
+def scope_nodes(node: ast.AST) -> Iterator[ast.AST]:
     for child in ast.iter_child_nodes(node):
         yield child
         if not isinstance(child, SCOPES):
@@ -66,42 +63,28 @@ def capture_name(node: ast.AST) -> str:
     return ""
 
 
-def annotation_type(node: ast.AST | None, bindings: dict[str, str], depth=0) -> str:
-    if node is None or depth > 12:
-        return ""
-    if isinstance(node, ast.Constant) and isinstance(node.value, str):
-        try:
-            node = ast.parse(node.value, mode="eval").body
-        except SyntaxError:
-            return ""
-        return annotation_type(node, bindings, depth + 1)
-    if isinstance(node, ast.Subscript):
-        wrapper = qualified(node.value, bindings)
-        values = node.slice.elts if isinstance(node.slice, ast.Tuple) else [node.slice]
-        if wrapper in {
-            "typing.Annotated",
-            "typing_extensions.Annotated",
-            "typing.Optional",
-        }:
-            return annotation_type(values[0], bindings, depth + 1)
-        if wrapper == "typing.Union":
-            return union_type(values, bindings, depth + 1)
-    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):
-        return union_type([node.left, node.right], bindings, depth + 1)
-    resolved = qualified(node, bindings)
-    return resolved if resolved and not resolved.startswith("local:") else ""
+def returned_type_bindings(
+    node: ast.AST, bindings: dict[str, str]
+) -> dict[str, str]:
+    returned_types: dict[str, str] = {}
+    for child in scope_nodes(node):
+        if not isinstance(child, FUNCTIONS):
+            continue
+        returned_type = annotation_type(child.returns, bindings)
+        if is_catalogued_client(returned_type):
+            returned_types[child.name + RETURNED_TYPE_SUFFIX] = returned_type
+    return returned_types
 
 
-def union_type(nodes: list[ast.AST], bindings: dict[str, str], depth: int) -> str:
-    types = {
-        annotation_type(node, bindings, depth)
-        for node in nodes
-        if not (isinstance(node, ast.Constant) and node.value is None)
-    }
-    return next(iter(types)) if len(types) == 1 and "" not in types else ""
+def module_bindings(tree: ast.Module) -> dict[str, str]:
+    bindings = {"open": "builtins.open", **imports_in(tree)}
+    returned_types = returned_type_bindings(tree, bindings)
+    return {**bindings, **returned_types}
 
 
-def local_bindings(node: ast.AST, inherited: dict[str, str]) -> dict[str, str]:
+def local_bindings(
+    node: ast.AST, inherited: dict[str, str]
+) -> dict[str, str]:
     bindings = dict(inherited)
     for child in scope_nodes(node):
         if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Store):
@@ -125,23 +108,36 @@ def local_bindings(node: ast.AST, inherited: dict[str, str]) -> dict[str, str]:
                 if annotation:
                     bindings[argument.arg] = annotation
     bindings.update(imports_in(node))
+    bindings.update(returned_type_bindings(node, bindings))
     return bindings
 
 
+def called_client_type(call: ast.Call, bindings: dict[str, str]) -> str:
+    returned_type_key = qualified(call.func) + RETURNED_TYPE_SUFFIX
+    if returned_type_key in bindings:
+        return bindings[returned_type_key]
+    resolved = qualified(call, bindings)
+    operation = resolved.rsplit(".", 1)[-1]
+    if operation[:1].isupper() or operation in CLIENT_FACTORY_OPERATIONS:
+        return resolved
+    return ""
+
+
 def assigned_value(value: ast.AST | None, bindings: dict[str, str]) -> str:
-    if isinstance(value, ast.Subscript) and qualified(value.value, bindings) in {
+    if isinstance(value, ast.Await):
+        return assigned_value(value.value, bindings)
+    if isinstance(value, ast.Subscript) and qualified(
+        value.value, bindings
+    ) in {
         "typing.Annotated",
         "typing_extensions.Annotated",
         "typing.Optional",
         "typing.Union",
     }:
         return annotation_type(value, bindings)
-    resolved = qualified(value, bindings)
     if isinstance(value, ast.Call):
-        tail = resolved.rsplit(".", 1)[-1]
-        if not (tail[:1].isupper() or tail in {"open", "connect", "cursor"}):
-            return ""
-    return resolved
+        return called_client_type(value, bindings)
+    return qualified(value, bindings)
 
 
 def bind_assignment(node: ast.AST, bindings: dict[str, str]) -> None:

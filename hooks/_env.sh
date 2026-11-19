@@ -1,14 +1,17 @@
 repository_root=$(git rev-parse --show-toplevel)
 cd "$repository_root"
 
-declared_services="user-service content-management-service"
-declared_node_packages="ui-service api-gateway"
+declared_services="src/modules/user-service
+src/modules/content-management-service"
+declared_node_packages="src/modules/api-gateway"
+declared_flutter_projects="src/modules/ui"
 
 services=""
 node_packages=""
+flutter_projects=""
 
 for declared in $declared_services; do
-    if [ -d "$declared/src" ]; then
+    if [ -d "$declared/features" ]; then
         services="$services $declared"
     fi
 done
@@ -19,6 +22,12 @@ for declared in $declared_node_packages; do
     fi
 done
 
+for declared in $declared_flutter_projects; do
+    if [ -f "$declared/pubspec.yaml" ]; then
+        flutter_projects="$flutter_projects $declared"
+    fi
+done
+
 ruff_binary="$repository_root/.venv/bin/ruff"
 basedpyright_binary="$repository_root/.venv/bin/basedpyright"
 pylint_binary="$repository_root/.venv/bin/pylint"
@@ -26,7 +35,7 @@ vulture_binary="$repository_root/.venv/bin/vulture"
 deptry_binary="$repository_root/.venv/bin/deptry"
 python_binary="$repository_root/.venv/bin/python"
 pip_audit_binary="$repository_root/.venv/bin/pip-audit"
-semgrep_binary="$repository_root/.venv/bin/semgrep"
+semgrep_binary=$(command -v semgrep || true)
 
 node_binary=$(command -v node || true)
 eslint_binary="$repository_root/hooks/node_modules/.bin/eslint"
@@ -34,11 +43,25 @@ jscpd_binary="$repository_root/hooks/node_modules/.bin/jscpd"
 knip_binary="$repository_root/hooks/node_modules/.bin/knip"
 typescript_module="$repository_root/hooks/node_modules/typescript"
 
+service_sources() {
+    for service_entry in "$1"/*; do
+        case "$(basename "$service_entry")" in
+            tests|migrations|stubs|__pycache__|run*.py) ;;
+            *.py) echo "$service_entry" ;;
+            *)
+                if [ -d "$service_entry" ]; then
+                    echo "$service_entry"
+                fi
+                ;;
+        esac
+    done
+}
+
 source_directories=""
 test_directories=""
 
 for service in $services; do
-    source_directories="$source_directories $service/src"
+    source_directories="$source_directories $(service_sources "$service")"
     test_directories="$test_directories $service/tests"
 done
 

@@ -11,7 +11,8 @@ if [ -n "$services" ]; then
     require_binary "$vulture_binary" vulture
 
     for service in $services; do
-        if ! (cd "$service" && "$vulture_binary" src run.py "$whitelist" \
+        if ! (cd "$service" && "$vulture_binary" \
+            $(service_sources .) run*.py "$whitelist" \
             --min-confidence 60); then
             echo "pre-commit: nothing reaches this code in $service -" >&2
             echo "pre-commit: delete it, or add it to $whitelist" >&2

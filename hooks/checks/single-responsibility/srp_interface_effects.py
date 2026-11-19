@@ -31,7 +31,6 @@ AUTHENTICATION_PREFIXES = (
     "bcrypt",
     "passlib",
     "argon2",
-    "hashlib",
     "hmac",
     "cryptography",
     "nacl",

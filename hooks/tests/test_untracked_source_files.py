@@ -21,7 +21,7 @@ def test_nested_definitions_sees_a_file_never_added_to_git(
 ) -> None:
     repository(tmp_path)
     link_real_python(tmp_path)
-    _written(tmp_path, "user-service/src/nest.py", NESTED_DEFINITION)
+    _written(tmp_path, "src/modules/user-service/features/nest.py", NESTED_DEFINITION)
     finished = run_check(tmp_path, "nested-definitions")
 
     assert finished.returncode == 1
@@ -32,7 +32,7 @@ def test_definition_names_sees_a_file_never_added_to_git(
     tmp_path: Path,
 ) -> None:
     repository(tmp_path)
-    _written(tmp_path, "user-service/src/joined.py", JOINED_NAME)
+    _written(tmp_path, "src/modules/user-service/features/joined.py", JOINED_NAME)
     finished = run_check(tmp_path, "definition-names")
 
     assert finished.returncode == 1
@@ -46,7 +46,7 @@ def test_property_tests_sees_a_file_never_added_to_git(
     link_real_python(tmp_path)
     _written(
         tmp_path,
-        "user-service/src/plain.py",
+        "src/modules/user-service/features/plain.py",
         "def score(value):\n    return value\n",
     )
     finished = run_check(tmp_path, "property-tests")

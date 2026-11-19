@@ -27,17 +27,61 @@ beneath it.
 
 ## Requirements
 
-- Docker and Docker Compose
-- An `OPENAI_API_KEY`
+- To build the desktop app: an Apple silicon Mac with Flutter, Xcode and
+  Python 3.12
+- To use it: nothing to install up front. `leffic.app` ships its backend
+  and a text recognizer built on Apple's Vision framework (for images).
+  Two optional pieces are fetched only when you choose them in Settings →
+  Components: the official LibreOffice 26.8.2 (a 299 MB download, needed
+  for Word, Excel and PowerPoint files) and Claude Code, which the Ask chat
+  runs on and is found where you already installed it. An OpenAI key is
+  optional and only needed to generate study units
+- Docker and Docker Compose for the cloud stack
 
 ## Running it
+
+### Desktop app
+
+```bash
+./install.sh
+./build-desktop-app.sh
+```
+
+The script freezes the content service with PyInstaller (without the
+Claude Code copy the Agent SDK bundles), builds the Flutter app in
+`src/modules/ui`, adds the text recognizer and signs `leffic.app` ad hoc,
+so it opens on this Mac. The OpenAI key, if you want generation, goes in
+Settings and is stored in the macOS Keychain. It starts its own backend on
+`127.0.0.1` with a fresh secret on every launch and keeps its data in
+`~/Library/Application Support/app.leffic.leffic`.
+
+Settings → Components offers the optional pieces. LibreOffice downloads
+from documentfoundation.org only when you press Download; the app checks
+the image against its published SHA-256, copies `LibreOffice.app` into the
+data folder above and points the backend at it, and Remove deletes it
+again. Without it, opening or reading an office file says to download it
+in Settings. The Ask chat runs the Claude Code you installed (on the
+backend's PATH, then `~/.local/bin/claude`), signed in with your Claude
+account; if none is found, the card offers Anthropic's official installer
+(`https://claude.ai/install.sh`), after which you run `claude` once in
+Terminal to sign in. Settings can switch the chat to OpenAI.
+
+To run it from source instead, point the app at the virtualenv:
+
+```bash
+flutter run -d macos \
+  --dart-define=LEFFIC_BACKEND_PYTHON=$PWD/.venv/bin/python \
+  --dart-define=LEFFIC_BACKEND_SCRIPT=$PWD/src/modules/content-management-service/run_desktop.py
+```
+
+### Cloud stack
 
 ```bash
 docker compose up --build
 ```
 
-The web app is on <http://localhost:3009>, the gateway on
-<http://localhost:8888>. Nothing else publishes a port.
+The gateway is on <http://localhost:8888>. Nothing else publishes a
+port. The web client will be the same Flutter app built for the web.
 
 Set `OPENAI_API_KEY`, `JWT_SECRET_KEY` and the Postgres credentials from
 `docker-compose.yml`.
@@ -47,6 +91,19 @@ plain HTTP, so Compose sets `REFRESH_COOKIE_SECURE=false`; leave it unset
 wherever the gateway terminates TLS.
 
 ## Architecture
+
+Every deployable is a module under `src/modules/`. Each Python service
+keeps vertical slices in `features/` and code that two or more features
+share in `shared/`, next to its tests, migrations and Dockerfile. The
+Flutter app does the same in `lib/features/` and `lib/shared/`.
+
+```
+src/modules/
+  api-gateway/
+  content-management-service/
+  user-service/
+  ui/
+```
 
 Seven deployables and four datastores. No service calls another over
 HTTP: the only cross-service traffic is the `user.deleted` event on
@@ -70,7 +127,7 @@ user-events consumer.
 
 | Service | Holds | Talks to |
 |---|---|---|
-| `ui-service` | SolidJS SPA, built by Vite, served by nginx | the gateway |
+| `ui` | Flutter app: macOS desktop now, web later | the content service on desktop, the gateway in the cloud |
 | `api-gateway` | nginx with njs; verifies the JWT and applies CORS | every service |
 | `user-service` | Accounts, sealed AI provider keys, and the only JWT issuer | Postgres `users`, RabbitMQ |
 | `content-management-service` | Folders, decks, cards, tests, notes, files, reviews, scheduling, generation and the chatbot | Postgres `content`, OpenAI |
@@ -108,13 +165,13 @@ root folder is the folder whose id equals their user id.
 
 ## Tech stack
 
-- SolidJS, TypeScript, Vite
-- Vitest, fast-check
+- Flutter, Dart
+- TypeScript, Vitest, fast-check (gateway)
 - FastAPI, SQLAlchemy, Pydantic
 - nginx with njs
 - Celery, Redis
 - PostgreSQL
-- OpenAI
+- OpenAI, Claude Agent SDK
 - py-fsrs
 - Docker Compose
 

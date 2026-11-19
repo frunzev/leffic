@@ -5,5 +5,5 @@ set -e
 require_binary "$ruff_binary" ruff
 
 for service in $services; do
-    (cd "$service" && "$ruff_binary" check src run.py)
+    (cd "$service" && "$ruff_binary" check $(service_sources .) run*.py)
 done

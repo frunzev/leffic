@@ -6,8 +6,16 @@ import_statement='import[^;]*;'
 
 require_binary "$jscpd_binary" jscpd
 
+package_sources() {
+    if [ -d "$1/src" ]; then
+        echo "$1/src"
+    else
+        service_sources "$1"
+    fi
+}
+
 for package in $services $node_packages; do
-    if ! "$jscpd_binary" "$package/src" \
+    if ! "$jscpd_binary" $(package_sources "$package") \
         --threshold 0 \
         --ignore-pattern "$import_statement" \
         --reporters console \

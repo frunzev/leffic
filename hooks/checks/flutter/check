@@ -1,0 +1,28 @@
+#!/bin/sh
+set -e
+. "$(dirname "$0")/../../_env.sh"
+
+echo "pre-commit: flutter (strict analysis and every test)"
+echo "pre-commit: type it strictly and keep every property green"
+
+if [ -z "$flutter_projects" ]; then
+    exit 0
+fi
+
+flutter_binary=$(command -v flutter || true)
+require_binary "$flutter_binary" flutter
+
+for flutter_project in $flutter_projects; do
+    if ! (cd "$flutter_project" \
+        && "$flutter_binary" analyze --fatal-infos); then
+        echo "pre-commit: flutter analyze rejected $flutter_project" >&2
+        exit 1
+    fi
+
+    if ! (cd "$flutter_project" \
+        && "$flutter_binary" test --concurrency=1 --reporter compact); then
+        echo "pre-commit: a test failed in $flutter_project - fix the" >&2
+        echo "pre-commit: code, never weaken the property" >&2
+        exit 1
+    fi
+done

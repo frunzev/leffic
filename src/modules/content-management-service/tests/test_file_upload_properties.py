@@ -1,0 +1,148 @@
+import io
+import tempfile
+import uuid
+from pathlib import Path
+from typing import cast
+from unittest import mock
+
+from fastapi import UploadFile
+from hypothesis import given, settings
+from hypothesis import strategies as st
+from sqlalchemy.orm import Session
+
+from features.file_upload import file_uploader as uploader_module
+from features.file_upload.file_uploader import (
+    _recorded_files,
+    _uploaded_file_metadata,
+)
+from shared import local_disk_file_storage
+from shared.file_storage import storage_name
+from shared.local_disk_file_storage import LocalDiskFileStorage
+from shared.models import File as StoredFile
+from tests.file_upload_support import EXTENSIONS
+from tests.folder_seeding import seeded_folder
+from tests.property_support import property_world
+from tests.support import authorization
+
+_OK = 200
+_NOT_FOUND = 404
+_CLIENT, _SESSIONS = property_world()
+_CONTENT = st.binary(min_size=1, max_size=32)
+_UPLOAD_NAMES = ("notes.pdf", "report.docx", "archive", "a.b.txt")
+_STORAGE = tempfile.mkdtemp()
+
+
+def _stored_names(session: Session, folder_id: uuid.UUID) -> list[str]:
+    rows = (
+        session.query(StoredFile)
+        .filter(StoredFile.folder_id == folder_id)
+        .all()
+    )
+
+    return [row.name for row in rows]
+
+
+def _named(described: dict[str, str]) -> str:
+    return storage_name(described["file_id"], described["extension"])
+
+
+def _upload(name: str, content: bytes) -> UploadFile:
+    return UploadFile(filename=name, file=io.BytesIO(content))
+
+
+@settings(max_examples=25, deadline=None)
+@given(EXTENSIONS, _CONTENT)
+def test__uploaded_file_metadata_property_describes_the_upload(
+    extension: str, content: bytes
+) -> None:
+    described = _uploaded_file_metadata(
+        _upload(f"notes.{extension}", content)
+    )
+
+    assert described["extension"] == extension
+    assert described["name"] == f"notes.{extension}"
+    assert uuid.UUID(described["file_id"])
+
+
+@settings(max_examples=25, deadline=None)
+@given(st.sampled_from(_UPLOAD_NAMES), _CONTENT)
+def test_storage_name_property_names_the_file_that_was_written(
+    filename: str, content: bytes
+) -> None:
+    uploaded = _upload(filename, content)
+    described = _uploaded_file_metadata(uploaded)
+
+    disk_storage = LocalDiskFileStorage(Path(_STORAGE))
+    disk_storage.save(uploaded.file, _named(described))
+
+    written = Path(_STORAGE) / _named(described)
+
+    assert written.read_bytes() == content
+
+
+@settings(max_examples=25, deadline=None)
+@given(st.uuids(), st.integers(min_value=1, max_value=3))
+def test__recorded_files_property_files_every_upload_under_the_folder(
+    owner: uuid.UUID, file_count: int
+) -> None:
+    uploaded = [
+        {
+            "file_id": str(uuid.uuid4()),
+            "extension": "pdf",
+            "name": f"notes-{index}.pdf",
+        }
+        for index in range(file_count)
+    ]
+
+    with _SESSIONS() as session:
+        folder_id = seeded_folder(session, owner, {})
+        _recorded_files(session, str(folder_id), uploaded)
+        stored = _stored_names(session, folder_id)
+
+    assert sorted(stored) == sorted(item["name"] for item in uploaded)
+
+
+@settings(max_examples=25, deadline=None)
+@given(st.uuids(), EXTENSIONS)
+def test_upload_files_property_answers_with_one_entry_per_file(
+    owner: uuid.UUID, extension: str
+) -> None:
+    with _SESSIONS() as session:
+        folder_id = seeded_folder(session, owner, {})
+
+    with mock.patch.object(
+        local_disk_file_storage, "_FILES_DIRECTORY", _STORAGE
+    ):
+        response = _CLIENT.post(
+            "/upload-files",
+            files=[("files", (f"a.{extension}", b"body"))],
+            data={"folder_id": str(folder_id)},
+            headers=authorization(str(owner)),
+        )
+
+    body = cast("dict[str, object]", response.json())
+    described = cast("list[object]", body["file_metadata"])
+
+    assert response.status_code == _OK
+    assert len(described) == 1
+
+
+@settings(max_examples=25, deadline=None)
+@given(st.uuids(), EXTENSIONS)
+def test_get_file_property_reports_a_file_that_is_not_stored(
+    file_id: uuid.UUID, extension: str
+) -> None:
+    with mock.patch.object(
+        uploader_module, "_FILES_DIRECTORY", _STORAGE
+    ):
+        response = _CLIENT.get(
+            "/file",
+            params={
+                "file_id": str(file_id),
+                "file_extension": extension,
+            },
+            headers=authorization(),
+        )
+
+    assert response.status_code == _NOT_FOUND
+

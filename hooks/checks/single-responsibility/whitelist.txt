@@ -1,10 +1,12 @@
 # Reviewed SRP false positives only. No findings are whitelisted by default.
-# A finding means the unit reaches two or more external entities, so it has two
-# or more reasons to change. Analyze each one first: split the real violations;
-# whitelist a false positive with a concrete reason explaining why those
-# entities are one reason to change. One JSON object per line; blank lines and
-# comments are OK.
-# Paths are exact, relative to the command's working directory (repository root
-# for the hook), or absolute. kind and name must match the JSON report exactly.
+# One JSON object per line; blank lines and # comments are OK.
+# path: exact, relative to the working directory (repository root), or absolute.
+# kind, name, entities: copied exactly from the unit in the JSON report.
+# An entry suppresses its unit only while the entities match exactly; an entry
+# whose analyzed file no longer has that unit fails the check.
 # Example (commented out, so it does not suppress anything):
-# {"path":"src/example.py","kind":"module","name":"<module>","reason":"Explain why these entities are one reason to change."}
+# {"path":"src/example.py","kind":"module","name":"<module>","entities":["filesystem","network"],"reason":"Explain why these entities are one reason to change."}
+{"path":"src/modules/content-management-service/features/study_units_generation/generation_tasks.py","kind":"module","name":"<module>","entities":["filesystem","persistence"],"reason":"Reads a bundled prompt template shipped with the code, not stored user files; the only external entity is the database."}
+{"path":"src/modules/content-management-service/features/study_units_generation/generation_tasks.py","kind":"callable","name":"<module>._generate_flashcards_of_type_task","entities":["filesystem","persistence"],"reason":"Reads a bundled prompt template shipped with the code, not stored user files; the only external entity is the database."}
+{"path":"src/modules/content-management-service/features/study_units_generation/generation_tasks.py","kind":"callable","name":"<module>._generate_test_items_of_type_task","entities":["filesystem","persistence"],"reason":"Reads a bundled prompt template shipped with the code, not stored user files; the only external entity is the database."}
+{"path":"src/modules/content-management-service/features/study_units_generation/generation_tasks.py","kind":"callable","name":"<module>._generate_note_task","entities":["filesystem","persistence"],"reason":"Reads a bundled prompt template shipped with the code, not stored user files; the only external entity is the database."}

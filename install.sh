@@ -13,17 +13,22 @@ fi
 "$virtual_environment/bin/pip" install --upgrade pip
 "$virtual_environment/bin/pip" install -r requirements-dev.txt
 "$virtual_environment/bin/pip" install \
-    -r content-management-service/requirements.txt
-"$virtual_environment/bin/pip" install -r user-service/requirements.txt
+    -r src/modules/content-management-service/requirements.txt
+"$virtual_environment/bin/pip" install \
+    -r src/modules/user-service/requirements.txt
 
 (cd hooks && npm install)
 
-for node_package in ui-service api-gateway; do
+for node_package in src/modules/api-gateway; do
     (cd "$node_package" && npm install)
 done
 
 if ! command -v gitleaks > /dev/null 2>&1; then
     echo "install: gitleaks is missing - brew install gitleaks"
+fi
+
+if ! command -v semgrep > /dev/null 2>&1; then
+    echo "install: semgrep is missing - brew install semgrep"
 fi
 
 git config core.hooksPath hooks

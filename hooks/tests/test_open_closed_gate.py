@@ -17,7 +17,7 @@ def test_failure_suggests_ocp_extension_patterns(tmp_path: Path) -> None:
     )
     repository(tmp_path)
     link_real_python(tmp_path)
-    stage_file(tmp_path, "user-service/src/presentation.py", source)
+    stage_file(tmp_path, "src/modules/user-service/features/presentation.py", source)
     finished = run_check(tmp_path, "open-closed")
 
     assert finished.returncode == 1

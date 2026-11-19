@@ -3,7 +3,15 @@ set -e
 
 . "$(dirname "$0")/_env.sh"
 
-for declared in $declared_services $declared_node_packages; do
+for declared in $declared_services; do
+    if [ ! -d "$declared/features" ]; then
+        echo "pre-commit: $declared is declared in hooks/_env.sh but has" >&2
+        echo "pre-commit: no features directory, so nothing checks it" >&2
+        exit 1
+    fi
+done
+
+for declared in $declared_node_packages; do
     if [ ! -d "$declared/src" ]; then
         echo "pre-commit: $declared is declared in hooks/_env.sh but has" >&2
         echo "pre-commit: no src directory, so nothing checks it" >&2
@@ -25,6 +33,7 @@ dead-code
 linters
 unused-deps
 property-tests
+flutter
 vulnerable-deps
 security-patterns
 strict-typing

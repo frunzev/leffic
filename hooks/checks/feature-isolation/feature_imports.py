@@ -5,7 +5,6 @@ from typing import NamedTuple
 
 FEATURES_PACKAGE = "features"
 FEATURES_PREFIX = f"{FEATURES_PACKAGE}."
-FEATURES_DIRECTORY = ("src", "features")
 ESCAPING_LEVEL = 2
 
 PackageChain = tuple[str, ...]
@@ -24,18 +23,15 @@ class FeatureLocation(NamedTuple):
 
 class FeatureRoot:
     def of(self, path: Path) -> FeatureLocation | None:
-        parts = path.parts
-        depth = len(FEATURES_DIRECTORY)
+        directories = path.parts[:-1]
 
-        for index in range(len(parts) - depth):
-            if parts[index : index + depth] != FEATURES_DIRECTORY:
-                continue
+        if FEATURES_PACKAGE not in directories:
+            return None
 
-            root = Path(*parts[: index + depth])
+        index = directories.index(FEATURES_PACKAGE)
+        root = Path(*directories[: index + 1])
 
-            return FeatureLocation(root, parts[index + depth : -1])
-
-        return None
+        return FeatureLocation(root, directories[index + 1 :])
 
 
 class FeatureSegments:

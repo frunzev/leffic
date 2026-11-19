@@ -31,7 +31,7 @@ operations. The supported entities are:
 | Entity | Recognized from |
 |---|---|
 | `ai` | model provider clients |
-| `authentication` | token, signature, password and hashing libraries |
+| `authentication` | token, signature and password libraries (not content hashing) |
 | `email` | mail transport libraries |
 | `filesystem` | file and directory operations |
 | `network` | HTTP, socket and object-storage clients |
@@ -138,15 +138,19 @@ no active exceptions. It accepts one JSON object per line, with blank lines and
 `#` comments allowed:
 
 ```json
-{"path":"src/example.py","kind":"module","name":"<module>","reason":"Why these entities are one reason to change."}
+{"path":"src/example.py","kind":"module","name":"<module>","entities":["filesystem","network"],"reason":"Why these entities are one reason to change."}
 ```
 
-Copy `kind` and `name` from the JSON report. Paths are relative to the command's
-working directory, which is the repository root for the hook; absolute paths also
-work. Matching uses the exact physical file, kind and unit name. Wildcards are
-not supported, and an exception never exempts another finding in the same file.
-Revisit exceptions when the code changes. Invalid entries, missing reasons and
-duplicate findings fail the analysis.
+Copy `kind`, `name` and the sorted `entities` from the JSON report. Paths are
+relative to the command's working directory, which is the repository root for
+the hook; absolute paths also work. Matching uses the exact physical file, kind
+and unit name, and suppresses the unit only while its entities equal the
+recorded ones: a unit that gains or loses an entity is reported again. An entry
+for an analyzed file that no longer has that unit fails the analysis; entries
+for files outside the scan are ignored. Wildcards are not supported, and an
+exception never exempts another finding in the same file. Invalid entries,
+missing reasons and duplicate findings fail the analysis. A leading UTF-8 byte
+order mark is accepted.
 
 Standalone users may pass `--whitelist /project/whitelist.txt`; the default is the
 file beside this checker. JSON keeps every unit's original coefficient and

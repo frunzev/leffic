@@ -10,7 +10,7 @@ if [ -n "$services" ]; then
     require_binary "$deptry_binary" deptry
 
     for service in $services; do
-        if ! (cd "$service" && "$deptry_binary" src \
+        if ! (cd "$service" && "$deptry_binary" . \
             --experimental-namespace-package); then
             echo "pre-commit: requirements.txt disagrees with the" >&2
             echo "pre-commit: imports in $service - delete the unused" >&2

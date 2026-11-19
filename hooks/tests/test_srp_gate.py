@@ -29,10 +29,13 @@ def test_check_is_executable_and_registered_early():
 @pytest.mark.parametrize(
     "relative, suffix",
     [
-        ("user-service/src/worker.py", ".py"),
-        ("content-management-service/src/worker.py", ".py"),
-        ("ui-service/src/worker.tsx", ".tsx"),
-        ("api-gateway/src/worker.ts", ".ts"),
+        ("src/modules/user-service/features/worker.py", ".py"),
+        (
+            "src/modules/content-management-service/features/worker.py",
+            ".py",
+        ),
+        ("src/modules/api-gateway/src/worker.tsx", ".tsx"),
+        ("src/modules/api-gateway/src/worker.ts", ".ts"),
     ],
 )
 @pytest.mark.parametrize("at_threshold", [False, True])
@@ -59,7 +62,7 @@ def test_hook_enforces_two_entities_in_every_declared_package(
 def test_untracked_working_tree_sources_are_checked(tmp_path):
     repository(tmp_path)
     link_real_python(tmp_path)
-    source = tmp_path / "user-service/src/new with spaces.py"
+    source = tmp_path / "src/modules/user-service/features/new with spaces.py"
     source.parent.mkdir(parents=True)
     source.write_text(mixed_function())
 
@@ -69,10 +72,10 @@ def test_untracked_working_tree_sources_are_checked(tmp_path):
 def test_deleted_sources_and_non_source_directories_do_not_block(tmp_path):
     repository(tmp_path)
     link_real_python(tmp_path)
-    stage_file(tmp_path, "user-service/src/deleted.py", mixed_function())
-    (tmp_path / "user-service/src/deleted.py").unlink()
-    stage_file(tmp_path, "user-service/tests/worker.py", mixed_function())
-    stage_file(tmp_path, "user-service/src/__pycache__/cached.py", mixed_function())
+    stage_file(tmp_path, "src/modules/user-service/features/deleted.py", mixed_function())
+    (tmp_path / "src/modules/user-service/features/deleted.py").unlink()
+    stage_file(tmp_path, "src/modules/user-service/tests/worker.py", mixed_function())
+    stage_file(tmp_path, "src/modules/user-service/features/__pycache__/cached.py", mixed_function())
     result = run_check(tmp_path, "single-responsibility")
 
     assert result.returncode == 0
@@ -81,7 +84,7 @@ def test_deleted_sources_and_non_source_directories_do_not_block(tmp_path):
 
 def test_missing_runtime_fails_with_install_instructions(tmp_path):
     repository(tmp_path)
-    stage_file(tmp_path, "user-service/src/worker.py", split_class())
+    stage_file(tmp_path, "src/modules/user-service/features/worker.py", split_class())
     result = run_check(tmp_path, "single-responsibility")
 
     assert result.returncode == 1
@@ -91,7 +94,9 @@ def test_missing_runtime_fails_with_install_instructions(tmp_path):
 def test_missing_typescript_does_not_silently_skip_typescript(tmp_path):
     repository(tmp_path)
     link_real_python(tmp_path)
-    stage_file(tmp_path, "ui-service/src/worker.ts", split_class(".ts"))
+    stage_file(
+        tmp_path, "src/modules/api-gateway/src/worker.ts", split_class(".ts")
+    )
     result = run_check(tmp_path, "single-responsibility")
 
     assert result.returncode == 1
