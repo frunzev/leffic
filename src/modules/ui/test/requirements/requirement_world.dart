@@ -1,5 +1,7 @@
 import 'package:leffic/shared/api/api_client.dart';
+import 'package:leffic/shared/session/backend_scope.dart';
 
+import '../features/settings/settings_fakes.dart';
 import '../support/backend_fakes.dart';
 
 const Map<String, String> ratingScores = {
@@ -17,6 +19,9 @@ class UiWorld {
     '3': 900,
     '4': 9000,
   };
+  final RecordingRelauncher relauncher = RecordingRelauncher();
+  final RecordingKeychain keychain = RecordingKeychain(0);
+  final BackendLink link = connectedLink();
   FakeBackend? _backend;
 
   FakeBackend backend() {

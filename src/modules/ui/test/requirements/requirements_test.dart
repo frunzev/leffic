@@ -6,16 +6,21 @@ import '../support/hosting.dart';
 import 'ask_requirement_steps.dart';
 import 'folder_requirement_steps.dart';
 import 'gherkin_scenarios.dart';
+import 'note_requirement_steps.dart';
 import 'requirement_world.dart';
 import 'review_requirement_steps.dart';
+import 'settings_requirement_steps.dart';
 import 'step_definition.dart';
 
-const String _requirementsPath = '../../../requirements.feature';
+const String _requirementsDirectory = '../../../requirements';
+const String _featureSuffix = '.feature';
 
 final List<StepDefinition> _uiStepDefinitions = [
   ...folderStepDefinitions,
   ...reviewStepDefinitions,
   ...askStepDefinitions,
+  ...noteStepDefinitions,
+  ...settingsStepDefinitions,
   StepDefinition('Then', RegExp(r'^the app shows "(.+)"$'), _checkShown),
   StepDefinition('Then', RegExp(r'^the app offers "(.+)"$'), _checkShown),
 ];
@@ -58,11 +63,31 @@ Future<void> _runScenario(
   }
 }
 
-void main() {
-  final featureText = File(_requirementsPath).readAsStringSync();
-  final uiScenarios = scenariosTagged(featureText, uiTag);
+List<GherkinScenario> _uiScenarios() {
+  final featurePaths = <String>[];
 
-  test('requirements.feature holds the UI scenarios', () {
+  for (final entity in Directory(_requirementsDirectory).listSync()) {
+    if (entity is File && entity.path.endsWith(_featureSuffix)) {
+      featurePaths.add(entity.path);
+    }
+  }
+
+  featurePaths.sort();
+
+  final scenarios = <GherkinScenario>[];
+
+  for (final featurePath in featurePaths) {
+    final featureText = File(featurePath).readAsStringSync();
+    scenarios.addAll(scenariosTagged(featureText, uiTag));
+  }
+
+  return scenarios;
+}
+
+void main() {
+  final uiScenarios = _uiScenarios();
+
+  test('the requirements folder holds the UI scenarios', () {
     expect(uiScenarios, isNotEmpty);
   });
 

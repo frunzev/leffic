@@ -23,7 +23,9 @@ from incomplete_requirements import (
     incomplete_requirements,
 )
 
-REQUIREMENTS_FILE = "requirements.feature"
+FEATURE_FILE = "requirements/folders.feature"
+FOLDER_NOTE = "requirements/README.md"
+FEATURE_WITHOUT_RULES = "Feature: Leffic\n"
 VIRTUAL_ENVIRONMENT_PYTHON = f'exec "{sys.executable}" "$@"\n'
 WELL_EXEMPLIFIED_RULE = """Feature: Leffic
 
@@ -88,7 +90,7 @@ def _checked_repository(tmp_path: Path, feature_text: str | None) -> None:
     stub_binary(tmp_path, "python", VIRTUAL_ENVIRONMENT_PYTHON)
 
     if feature_text is not None:
-        stage_file(tmp_path, REQUIREMENTS_FILE, feature_text)
+        stage_file(tmp_path, FEATURE_FILE, feature_text)
 
 
 def test_accepts_a_rule_with_two_scenarios(tmp_path: Path) -> None:
@@ -121,12 +123,37 @@ def test_flags_a_scenario_outside_any_rule(tmp_path: Path) -> None:
     assert "Opening home shows an empty folder" in finished.stderr
 
 
-def test_flags_a_missing_requirements_file(tmp_path: Path) -> None:
+def test_flags_a_missing_requirements_folder(tmp_path: Path) -> None:
     _checked_repository(tmp_path, None)
     finished = run_check(tmp_path, "requirements")
 
     assert finished.returncode == 1
-    assert REQUIREMENTS_FILE in finished.stderr
+    assert "requirements/ is missing" in finished.stderr
+
+
+def test_flags_a_folder_without_feature_files(tmp_path: Path) -> None:
+    _checked_repository(tmp_path, None)
+    stage_file(tmp_path, FOLDER_NOTE, "One file per feature.\n")
+    finished = run_check(tmp_path, "requirements")
+
+    assert finished.returncode == 1
+    assert "holds no .feature file" in finished.stderr
+
+
+def test_flags_a_feature_file_without_rules(tmp_path: Path) -> None:
+    _checked_repository(tmp_path, FEATURE_WITHOUT_RULES)
+    finished = run_check(tmp_path, "requirements")
+
+    assert finished.returncode == 1
+    assert f"{FEATURE_FILE}: holds no rule" in finished.stderr
+
+
+def test_flags_an_empty_feature_file(tmp_path: Path) -> None:
+    _checked_repository(tmp_path, "")
+    finished = run_check(tmp_path, "requirements")
+
+    assert finished.returncode == 1
+    assert "holds no rule" in finished.stderr
 
 
 def test_flags_an_unreadable_requirements_file(tmp_path: Path) -> None:

@@ -1,6 +1,6 @@
 import pytest
 
-_FOREIGN_MARKERS = ("accounts", "ui")
+_FOREIGN_MARKERS = ("accounts", "ui", "gateway")
 
 
 def _belongs_to_another_service(item: pytest.Item) -> bool:

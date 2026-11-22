@@ -2,25 +2,34 @@
 set -e
 . "$(dirname "$0")/../../_env.sh"
 
-requirements_file="requirements.feature"
+requirements_directory="requirements"
 finder="$(dirname "$0")/incomplete_requirements.py"
 
-echo "pre-commit: requirements (two scenarios per rule, every scenario in a rule)"
+echo "pre-commit: requirements (one .feature per feature, two scenarios a rule)"
 echo "pre-commit: a rule without examples is a requirement no test enforces"
 
-if [ ! -f "$requirements_file" ]; then
-    echo "pre-commit: $requirements_file is missing - write the functional" >&2
-    echo "pre-commit: requirements there as Gherkin rules" >&2
+if [ ! -d "$requirements_directory" ]; then
+    echo "pre-commit: $requirements_directory/ is missing - write one" >&2
+    echo "pre-commit: .feature file per feature there" >&2
+    exit 1
+fi
+
+feature_files=$(find "$requirements_directory" -type f -name '*.feature' \
+    | sort)
+
+if [ -z "$feature_files" ]; then
+    echo "pre-commit: $requirements_directory/ holds no .feature file -" >&2
+    echo "pre-commit: write one per feature" >&2
     exit 1
 fi
 
 require_binary "$python_binary" python
 
-incomplete=$("$python_binary" "$finder" "$requirements_file")
+incomplete=$("$python_binary" "$finder" $feature_files)
 
 if [ -n "$incomplete" ]; then
     echo "pre-commit: give each rule at least two scenarios and put each" >&2
-    echo "pre-commit: scenario under a rule in $requirements_file:" >&2
+    echo "pre-commit: scenario under a rule in $requirements_directory/:" >&2
     echo "$incomplete" >&2
     exit 1
 fi

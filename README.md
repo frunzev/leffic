@@ -20,7 +20,7 @@ beneath it.
 | Import | From a file, a web page, a YouTube transcript, or a bare topic |
 | Flashcards | Again / Hard / Good / Easy, each labelled with its next interval |
 | Tests | Multiple choice, paginated, resumable, with a result screen |
-| Notes | Generated HTML, marked read on open, with a reading-time estimate |
+| Notes | Generated HTML with a reading-time estimate, marked read with one press |
 | Files | Any uploaded format is converted to PDF for viewing |
 | Mixed review | Every due card or test item across a folder and its subtree |
 | Ask | A general-purpose chatbot panel |

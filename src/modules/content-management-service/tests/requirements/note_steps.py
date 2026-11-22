@@ -62,9 +62,11 @@ def create_long_note_in_home(
     seeded_note(sessions, home_folder_id(sessions), note_name, note_body)
 
 
-@when(parsers.parse('I open the note "{note_name}"'))
-@given(parsers.parse('I opened the note "{note_name}"'))
-def open_note(client: TestClient, sessions: Sessions, note_name: str) -> None:
+@when(parsers.parse('I mark the note "{note_name}" as read'))
+@given(parsers.parse('I marked the note "{note_name}" as read'))
+def mark_note_read(
+    client: TestClient, sessions: Sessions, note_name: str
+) -> None:
     opened = _opened_note(client, sessions, note_name)
     _ = opened.raise_for_status()
 
