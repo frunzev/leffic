@@ -685,6 +685,86 @@ Feature: Leffic
       When I ask "What is a cell?"
       Then I am told "OpenAI is not set up. Add an OpenAI API key in Settings, or choose Claude Code there."
 
+  @ui
+  Rule: The app lists what is inside a folder
+
+    Scenario: The app lists a folder's decks and notes
+      Given the backend has the folder "Biology" holding the deck "Cells" and the note "Atoms"
+      When I open the folder "Biology" in the app
+      Then the app shows "Cells"
+      And the app shows "Atoms"
+
+    Scenario: The app invites an import into an empty folder
+      Given the backend has the empty folder "Biology"
+      When I open the folder "Biology" in the app
+      Then the app shows "Nothing here yet"
+
+  @ui
+  Rule: The app says why a page cannot load and offers to retry
+
+    Scenario: A folder that cannot load says why
+      Given the backend refuses the folder "Biology" with "Folder does not exist!"
+      When I open the folder "Biology" in the app
+      Then the app shows "Folder does not exist!"
+      And the app offers "Try again"
+
+    Scenario: A deck that cannot load says why
+      Given the backend refuses the deck "Cells" with "Deck does not exist!"
+      When I review the deck "Cells" in the app
+      Then the app shows "Deck does not exist!"
+      And the app offers "Try again"
+
+  @ui
+  Rule: Each rating button in the app shows when the card comes back
+
+    Scenario: A rating minutes away is labelled in minutes
+      Given the backend has the deck "Cells" with the due card "What is DNA?" answered "A molecule"
+      And the backend brings the card back in 900 seconds for "Good"
+      When I review the deck "Cells" in the app
+      And I show the answer
+      Then the app shows "A molecule"
+      And the "Good" button says "15 min"
+
+    Scenario: A rating days away is labelled in days
+      Given the backend has the deck "Cells" with the due card "What is DNA?" answered "A molecule"
+      And the backend brings the card back in 259200 seconds for "Easy"
+      When I review the deck "Cells" in the app
+      And I show the answer
+      Then the "Easy" button says "3 days"
+
+  @ui
+  Rule: Rating the last due card in the app sends my rating and ends the review
+
+    Scenario: Rating the last card Good sends 3 and ends the review
+      Given the backend has the deck "Cells" with the due card "What is DNA?" answered "A molecule"
+      When I review the deck "Cells" in the app
+      And I show the answer
+      And I rate the card "Good"
+      Then the backend received the rating 3
+      And the app shows "You're done for today"
+
+    Scenario: Rating the last card Again sends 1 and ends the review
+      Given the backend has the deck "Cells" with the due card "What is DNA?" answered "A molecule"
+      When I review the deck "Cells" in the app
+      And I show the answer
+      And I rate the card "Again"
+      Then the backend received the rating 1
+      And the app shows "You're done for today"
+
+  @ui
+  Rule: The app shows Ask's answer or why it could not answer
+
+    Scenario: Ask's answer appears in the conversation
+      Given Ask answers every question with "Cells are the unit of life."
+      When I ask "What is a cell?" in the app
+      Then the app shows "What is a cell?"
+      And the app shows "Cells are the unit of life."
+
+    Scenario: An unavailable Claude Code is explained in the app
+      Given Ask is unavailable with "Claude Code did not answer. Check that it is installed and logged in."
+      When I ask "What is a cell?" in the app
+      Then the app shows "Claude Code did not answer. Check that it is installed and logged in."
+
   Rule: Deleting my account deletes all my folders, content and files
 
     Scenario: My folders and their content are removed

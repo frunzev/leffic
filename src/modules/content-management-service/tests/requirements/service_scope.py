@@ -1,19 +1,27 @@
 import pytest
 
-_ACCOUNTS_MARKER = "accounts"
+_FOREIGN_MARKERS = ("accounts", "ui")
+
+
+def _belongs_to_another_service(item: pytest.Item) -> bool:
+    for foreign_marker in _FOREIGN_MARKERS:
+        if item.get_closest_marker(foreign_marker) is not None:
+            return True
+
+    return False
 
 
 def pytest_collection_modifyitems(
     config: pytest.Config, items: list[pytest.Item]
 ) -> None:
     kept_items: list[pytest.Item] = []
-    account_items: list[pytest.Item] = []
+    foreign_items: list[pytest.Item] = []
 
     for item in items:
-        if item.get_closest_marker(_ACCOUNTS_MARKER) is None:
-            kept_items.append(item)
+        if _belongs_to_another_service(item):
+            foreign_items.append(item)
         else:
-            account_items.append(item)
+            kept_items.append(item)
 
-    config.hook.pytest_deselected(items=account_items)
+    config.hook.pytest_deselected(items=foreign_items)
     items[:] = kept_items
