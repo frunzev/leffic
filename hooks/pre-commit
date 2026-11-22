@@ -22,6 +22,7 @@ done
 checks_cheapest_first="
 secrets
 file-length
+requirements
 single-responsibility
 feature-isolation
 open-closed

@@ -1,0 +1,26 @@
+#!/bin/sh
+set -e
+. "$(dirname "$0")/../../_env.sh"
+
+requirements_file="requirements.feature"
+finder="$(dirname "$0")/incomplete_requirements.py"
+
+echo "pre-commit: requirements (two scenarios per rule, every scenario in a rule)"
+echo "pre-commit: a rule without examples is a requirement no test enforces"
+
+if [ ! -f "$requirements_file" ]; then
+    echo "pre-commit: $requirements_file is missing - write the functional" >&2
+    echo "pre-commit: requirements there as Gherkin rules" >&2
+    exit 1
+fi
+
+require_binary "$python_binary" python
+
+incomplete=$("$python_binary" "$finder" "$requirements_file")
+
+if [ -n "$incomplete" ]; then
+    echo "pre-commit: give each rule at least two scenarios and put each" >&2
+    echo "pre-commit: scenario under a rule in $requirements_file:" >&2
+    echo "$incomplete" >&2
+    exit 1
+fi
