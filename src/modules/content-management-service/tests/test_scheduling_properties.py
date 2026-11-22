@@ -8,6 +8,7 @@ from hypothesis import strategies as st
 
 from shared.flashcard_scheduling import (
     RATING_MAP,
+    _preview_scheduler,
     _restored_card,
     _restored_scheduler,
     get_ratings_times,
@@ -48,6 +49,20 @@ def test__restored_scheduler_property_ignores_an_empty_scheduler(
     assert restored.to_dict() == Scheduler().to_dict()
 
 
+@settings(max_examples=25)
+@given(st.booleans(), st.floats(min_value=0.7, max_value=0.99))
+def test__preview_scheduler_property_never_fuzzes_and_keeps_retention(
+    is_fuzzing: bool, desired_retention: float
+) -> None:
+    written_scheduler = Scheduler(
+        desired_retention=desired_retention, enable_fuzzing=is_fuzzing
+    ).to_dict()
+    preview = _preview_scheduler(written_scheduler)
+
+    assert preview.enable_fuzzing is False
+    assert preview.desired_retention == desired_retention
+
+
 @settings(max_examples=25, deadline=None)
 @given(_REVIEW_HISTORIES, _RATINGS)
 def test_schedule_flashcard_fsrs_property_never_schedules_into_the_past(
@@ -70,3 +85,16 @@ def test_get_ratings_times_property_never_returns_a_negative_wait(
 
     assert sorted(times) == [1, 2, 3, 4]
     assert all(seconds >= 0 for seconds in times.values())
+
+
+@settings(max_examples=60, deadline=None)
+@given(_REVIEW_HISTORIES)
+def test_get_ratings_times_property_never_brings_a_harder_rating_back_later(
+    ratings: list[int],
+) -> None:
+    times = get_ratings_times(_reviewed_card(ratings).to_dict(), None)
+    waits_from_hardest_to_easiest = [times[1], times[2], times[3], times[4]]
+
+    assert waits_from_hardest_to_easiest == sorted(
+        waits_from_hardest_to_easiest
+    )

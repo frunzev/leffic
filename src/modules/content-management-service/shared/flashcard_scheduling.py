@@ -34,13 +34,11 @@ def get_ratings_times(
 ) -> dict[int, int]:
     timestamp = datetime.now(UTC)
     restored_card = _restored_card(card)
-    restored_scheduler = _restored_scheduler(scheduler)
+    preview_scheduler = _preview_scheduler(scheduler)
     ratings_times: dict[int, int] = {}
 
     for rating_value, rating in RATING_MAP.items():
-        reviewed_card, _ = restored_scheduler.review_card(
-            restored_card, rating
-        )
+        reviewed_card, _ = preview_scheduler.review_card(restored_card, rating)
         seconds_until_due = (reviewed_card.due - timestamp).total_seconds()
         ratings_times[rating_value] = max(
             _NO_TIME_LEFT, int(seconds_until_due)
@@ -69,3 +67,13 @@ def _restored_scheduler(scheduler: SchedulerDict | None) -> Scheduler:
         return Scheduler()
 
     return Scheduler.from_dict(scheduler)
+
+
+def _preview_scheduler(scheduler: SchedulerDict | None) -> Scheduler:
+    scheduler_settings = _restored_scheduler(scheduler).to_dict()
+    unfuzzed_settings: SchedulerDict = {
+        **scheduler_settings,
+        "enable_fuzzing": False,
+    }
+
+    return Scheduler.from_dict(unfuzzed_settings)
