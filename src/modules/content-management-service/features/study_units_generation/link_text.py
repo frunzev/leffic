@@ -2,15 +2,14 @@ from features.study_units_generation.webpage_extractor import (
     extract_link_main_content,
 )
 from features.study_units_generation.youtube_transcript import (
+    extract_video_id,
     get_youtube_transcript_auto,
 )
-
-_YOUTUBE_HOST = "youtube.com"
 
 
 class WebLinkText:
     def text_from_link(self, link: str) -> str:
-        if _YOUTUBE_HOST in link:
+        if extract_video_id(link) is not None:
             transcript = get_youtube_transcript_auto(link)
 
             if transcript:
