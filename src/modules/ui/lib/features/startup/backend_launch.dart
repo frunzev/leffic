@@ -77,6 +77,7 @@ Future<LaunchedBackend> launchBackend({
   final secret = newLaunchSecret();
   final settings = BackendSettings(
     port: port,
+    parentProcessId: pid,
     secret: secret,
     openAiKey: openAiKey,
     chatEngine: preferences.chatEngine,

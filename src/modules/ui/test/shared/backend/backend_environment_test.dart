@@ -10,6 +10,7 @@ void main() {
     forAll(
       (random) => BackendSettings(
         port: integerBetween(random, 1024, 65535),
+        parentProcessId: integerBetween(random, 2, 99999),
         secret: tokenOf(random),
         openAiKey: oneOf(random, [null, tokenOf(random)]),
         chatEngine: oneOf(random, ChatEngineChoice.values),
@@ -25,6 +26,10 @@ void main() {
         final environment = backendEnvironment(settings);
 
         expect(environment['DESKTOP_PORT'], '${settings.port}');
+        expect(
+          environment['DESKTOP_PARENT_PROCESS_ID'],
+          '${settings.parentProcessId}',
+        );
         expect(environment['JWT_SECRET_KEY'], settings.secret);
         expect(environment['OPENAI_API_KEY'], settings.openAiKey);
         expect(

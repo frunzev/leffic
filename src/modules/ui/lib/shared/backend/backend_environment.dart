@@ -10,6 +10,7 @@ const String backendToolSearchPath =
 class BackendSettings {
   const BackendSettings({
     required this.port,
+    required this.parentProcessId,
     required this.secret,
     required this.openAiKey,
     required this.chatEngine,
@@ -17,6 +18,7 @@ class BackendSettings {
   });
 
   final int port;
+  final int parentProcessId;
   final String secret;
   final String? openAiKey;
   final ChatEngineChoice chatEngine;
@@ -30,6 +32,7 @@ Map<String, String> backendEnvironment(BackendSettings settings) {
 
   return {
     'DESKTOP_PORT': '${settings.port}',
+    'DESKTOP_PARENT_PROCESS_ID': '${settings.parentProcessId}',
     'JWT_SECRET_KEY': settings.secret,
     'CHAT_ENGINE': settings.chatEngine.setting,
     'DATABASE_URL': _databaseUrl,
