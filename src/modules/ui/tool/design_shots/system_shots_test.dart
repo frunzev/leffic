@@ -8,6 +8,7 @@ import 'package:leffic/features/settings/settings_page.dart';
 import 'package:leffic/shared/design/toast.dart';
 import 'package:leffic/shared/design/toast_host.dart';
 import 'package:leffic/shared/navigation/routes.dart';
+import 'package:leffic/shared/session/backend_scope.dart';
 import 'package:leffic/shared/settings/openai_key_store.dart';
 import 'package:leffic/shared/widgets/app_shell.dart';
 import 'package:leffic/shared/widgets/ask_panel_scope.dart';
@@ -49,8 +50,13 @@ class _ShotKeychain {
   }
 }
 
+Future<void> _keepShotBackend(BackendLink link) async {
+  return;
+}
+
 SettingsPage _settingsPage({required String? storedKey}) {
   return SettingsPage(
+    relaunchBackend: _keepShotBackend,
     keyStore: OpenAiKeyStore(_ShotKeychain(storedKey).run),
     findPreferencesDirectory: () async => Directory.systemTemp,
   );

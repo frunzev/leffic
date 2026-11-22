@@ -7,7 +7,8 @@ import '../../shared/design/segmented_control.dart';
 import '../../shared/settings/chat_engine_choice.dart';
 import 'ruled_block.dart';
 
-const String chatEngineRestartNote = 'Changing the engine restarts Leffic.';
+const String chatEngineRestartNote =
+    'Changing the engine restarts the backend; you stay where you are.';
 const List<ChatEngineChoice> _offeredEngines = [
   ChatEngineChoice.claudeCode,
   ChatEngineChoice.openAi,

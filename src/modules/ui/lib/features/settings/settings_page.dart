@@ -4,8 +4,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../shared/backend/backend_process.dart';
 import '../../shared/design/design_metrics.dart';
 import '../../shared/navigation/routes.dart';
+import '../../shared/session/backend_scope.dart';
 import '../../shared/settings/app_preferences.dart';
 import '../../shared/settings/chat_engine_choice.dart';
 import '../../shared/settings/openai_key_store.dart';
@@ -25,6 +27,7 @@ import 'settings_panel.dart';
 
 typedef PreferencesDirectoryFinder = Future<Directory> Function();
 typedef SettingsSnapshot = ({String? storedKey, AppPreferences preferences});
+typedef BackendRelauncher = Future<void> Function(BackendLink link);
 
 const String _componentsTitle = 'Components';
 const String _componentsText =
@@ -33,6 +36,7 @@ const String _componentsText =
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({
+    required this.relaunchBackend,
     this.keyStore = const OpenAiKeyStore(runCommand),
     this.findPreferencesDirectory = getApplicationSupportDirectory,
     this.findClaudeCode = findInstalledClaudeCode,
@@ -40,6 +44,7 @@ class SettingsPage extends StatefulWidget {
     super.key,
   });
 
+  final BackendRelauncher relaunchBackend;
   final OpenAiKeyStore keyStore;
   final PreferencesDirectoryFinder findPreferencesDirectory;
   final ClaudeCodeFinder findClaudeCode;
@@ -57,37 +62,49 @@ class _SettingsPageState extends State<SettingsPage> {
     return (storedKey: storedKey, preferences: preferences);
   }
 
-  Future<void> _saveKey(String key) async {
+  Future<void> _saveKey(String key, VoidCallback reload) async {
     await widget.keyStore.saveKey(key);
-    _restartBackend();
+    await _restartBackend(reload);
   }
 
-  Future<void> _removeKey() async {
+  Future<void> _removeKey(VoidCallback reload) async {
     await widget.keyStore.deleteKey();
-    _restartBackend();
+    await _restartBackend(reload);
   }
 
-  Future<void> _chooseEngine(ChatEngineChoice engine) async {
+  Future<void> _chooseEngine(
+    ChatEngineChoice engine,
+    VoidCallback reload,
+  ) async {
     final directory = await widget.findPreferencesDirectory();
 
     await savePreferences(directory, AppPreferences(chatEngine: engine));
-    _restartBackend();
+    await _restartBackend(reload);
   }
 
   Future<void> _installClaudeCode() {
     return installClaudeCode(widget.runInstallerCommand);
   }
 
-  void _restartBackend() {
+  Future<void> _restartBackend(VoidCallback reload) async {
     if (!mounted) {
       return;
     }
 
+    final link = BackendScope.linkOf(context);
     final navigator = Navigator.of(context);
 
-    unawaited(
-      navigator.pushNamedAndRemoveUntil(Routes.startup, (route) => false),
-    );
+    try {
+      await widget.relaunchBackend(link);
+    } on BackendStartError {
+      unawaited(
+        navigator.pushNamedAndRemoveUntil(Routes.startup, (route) => false),
+      );
+
+      return;
+    }
+
+    reload();
   }
 
   Widget _buildSettings(
@@ -103,12 +120,12 @@ class _SettingsPageState extends State<SettingsPage> {
         const KeychainNote(),
         OpenAiKeyBlock(
           storedKey: snapshot.storedKey,
-          onSave: _saveKey,
-          onRemove: _removeKey,
+          onSave: (key) => _saveKey(key, reload),
+          onRemove: () => _removeKey(reload),
         ),
         ChatEngineRow(
           selected: snapshot.preferences.chatEngine,
-          onSelected: _chooseEngine,
+          onSelected: (engine) => _chooseEngine(engine, reload),
         ),
       ],
     );

@@ -5,7 +5,7 @@ import 'settings_panel.dart';
 
 const String aiProviderKeysText =
     'Optional. Leffic generates flashcards, notes and tests with your '
-    'OpenAI key. Saving or removing it restarts Leffic.';
+    'OpenAI key. Saving or removing it restarts the backend in place.';
 
 class AiProviderPanel extends StatelessWidget {
   const AiProviderPanel({required this.body, super.key});

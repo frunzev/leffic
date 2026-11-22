@@ -18,6 +18,7 @@ import 'features/settings/libreoffice_release.dart';
 import 'features/settings/libreoffice_setup.dart';
 import 'features/settings/libreoffice_setup_scope.dart';
 import 'features/settings/settings_page.dart';
+import 'features/startup/backend_relaunch.dart';
 import 'features/startup/startup_page.dart';
 import 'shared/design/opaque_page_route.dart';
 import 'shared/design/toast_host.dart';
@@ -48,7 +49,9 @@ Widget pageFor(RouteSettings settings) {
     ),
     (Routes.note, final UnitArguments unit) => NotePage(arguments: unit),
     (Routes.file, final FileArguments file) => FilePage(arguments: file),
-    (Routes.settings, _) => const SettingsPage(),
+    (Routes.settings, _) => const SettingsPage(
+      relaunchBackend: relaunchBackendInPlace,
+    ),
     _ => const StartupPage(),
   };
 }

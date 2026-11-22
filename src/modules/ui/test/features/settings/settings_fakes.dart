@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:leffic/features/settings/libreoffice_setup.dart';
 import 'package:leffic/features/settings/libreoffice_setup_scope.dart';
 import 'package:leffic/features/settings/settings_page.dart';
+import 'package:leffic/shared/backend/backend_process.dart';
 import 'package:leffic/shared/navigation/routes.dart';
 import 'package:leffic/shared/session/backend_scope.dart';
 
@@ -48,6 +49,23 @@ class RecordingKeychain {
     }
 
     return ProcessResult(0, 0, '$key\n', '');
+  }
+}
+
+class RecordingRelauncher {
+  RecordingRelauncher({this.failure});
+
+  final String? failure;
+  final List<BackendLink> relaunched = [];
+
+  Future<void> relaunch(BackendLink link) async {
+    relaunched.add(link);
+
+    final message = failure;
+
+    if (message != null) {
+      throw BackendStartError(message);
+    }
   }
 }
 
