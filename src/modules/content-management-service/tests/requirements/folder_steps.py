@@ -1,3 +1,5 @@
+from typing import cast
+
 from fastapi.testclient import TestClient
 from httpx import Response
 from pytest_bdd import given, parsers, then, when
@@ -7,6 +9,7 @@ from tests.requirements.requirement_listing import (
     FOLDER_ENTRY,
     HOME,
     NOTE_ENTRY,
+    FolderEntry,
     entry_names,
     opened_folder,
 )
@@ -39,6 +42,34 @@ def created_folder(
 @given("I opened home")
 def open_home(client: TestClient) -> Response:
     return opened_folder(client, HOME, authorization())
+
+
+@when(
+    parsers.parse('I open the folder "{folder_name}"'),
+    target_fixture="reply",
+)
+def open_folder(
+    client: TestClient, sessions: Sessions, folder_name: str
+) -> Response:
+    folder_id = folder_id_named(sessions, folder_name)
+
+    return opened_folder(client, folder_id, authorization())
+
+
+@then(
+    parsers.parse(
+        'the listing shows the deck "{deck_name}" and the note "{note_name}"'
+    )
+)
+def check_listing(reply: Response, deck_name: str, note_name: str) -> None:
+    listed_entries = cast("list[FolderEntry]", reply_body(reply)["content"])
+    listed_units: list[tuple[object, object]] = []
+
+    for entry in listed_entries:
+        listed_units.append((entry["type"], entry["name"]))
+
+    assert (DECK_ENTRY, deck_name) in listed_units
+    assert (NOTE_ENTRY, note_name) in listed_units
 
 
 @then(parsers.parse('I see the folder "{folder_name}"'))
