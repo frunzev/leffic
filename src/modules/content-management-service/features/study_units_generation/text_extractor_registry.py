@@ -1,3 +1,5 @@
+import os
+
 from features.study_units_generation.email_text_extractor import (
     EmailTextExtractor,
 )
@@ -22,6 +24,8 @@ from features.study_units_generation.text_extractor import (
 )
 from shared.libreoffice_exporter import provide_pdf_conversion
 
+TEXT_RECOGNIZER_BINARY = os.getenv("TEXT_RECOGNIZER_BINARY", "tesseract")
+
 _PDF_EXTENSIONS = ("pdf",)
 _PLAIN_TEXT_EXTENSIONS = ("txt", "csv", "json")
 _HTML_EXTENSIONS = ("html", "htm")
@@ -40,7 +44,7 @@ _EXTENSIONS_OF_EACH_EXTRACTOR: tuple[
     (PlainTextExtractor(), _PLAIN_TEXT_EXTENSIONS),
     (HtmlTextExtractor(), _HTML_EXTENSIONS),
     (EmailTextExtractor(), _EMAIL_EXTENSIONS),
-    (ImageTextExtractor(), _IMAGE_EXTENSIONS),
+    (ImageTextExtractor(TEXT_RECOGNIZER_BINARY), _IMAGE_EXTENSIONS),
     (OfficeTextExtractor(provide_pdf_conversion()), _OFFICE_EXTENSIONS),
 )
 

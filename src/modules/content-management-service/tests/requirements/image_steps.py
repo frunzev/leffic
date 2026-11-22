@@ -4,19 +4,25 @@ from pathlib import Path
 import pytest
 from pytest_bdd import given, parsers
 
-from features.study_units_generation import image_text_extractor
+from features.study_units_generation.text_extractor_registry import (
+    text_extractor_factory,
+)
 
 _FAKE_RECOGNIZER = "fake-text-recognizer"
 _MISSING_RECOGNIZER = "missing-text-recognizer"
 _EXECUTABLE = 0o755
+_IMAGE_EXTENSION = "png"
 _RECOGNIZER_SCRIPT = "#!/bin/sh\nprintf '%s\\n' {recognized_text}\n"
 
 
 def _use_recognizer(
     monkeypatch: pytest.MonkeyPatch, recognizer_binary: Path
 ) -> None:
+    image_extractor = text_extractor_factory.get_text_extractor(
+        _IMAGE_EXTENSION
+    )
     monkeypatch.setattr(
-        image_text_extractor, "TEXT_RECOGNIZER_BINARY", str(recognizer_binary)
+        image_extractor, "_recognizer_binary", str(recognizer_binary)
     )
 
 

@@ -23,7 +23,7 @@ dockerfiles=$(find . \
 
 targets="$source_directories $node_source_directories $dockerfiles"
 
-if ! "$semgrep_binary" $config_flags $targets; then
+if ! "$semgrep_binary" --error $config_flags $targets; then
     echo "pre-commit: semgrep found a pattern the other checks miss -" >&2
     echo "pre-commit: fix it" >&2
     exit 1

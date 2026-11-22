@@ -19,10 +19,6 @@ _STEMS = st.text(alphabet="abcdef", min_size=1, max_size=8)
 _SUBPROCESS_RUN = (
     "features.study_units_generation.image_text_extractor.subprocess.run"
 )
-_CONFIGURED_BINARY = (
-    "features.study_units_generation.image_text_extractor."
-    "TEXT_RECOGNIZER_BINARY"
-)
 _TEXT_RECOGNIZER_BINARIES = (
     "tesseract",
     "/opt/homebrew/bin/tesseract",
@@ -30,6 +26,7 @@ _TEXT_RECOGNIZER_BINARIES = (
     "/Applications/Leffic.app/tools/leffic-text-recognizer",
 )
 _SCAN_PATH = "/work/scan.png"
+_DEFAULT_RECOGNIZER = "tesseract"
 _STANDARD_OUTPUT = "stdout"
 _RECOGNIZER_MISSING = "Text recognition is not available"
 
@@ -51,26 +48,23 @@ def test_extract_text_property_image_returns_the_recognized_text_stripped(
     succeeded = _recognition(0, recognized, b"")
 
     with mock.patch(_SUBPROCESS_RUN, return_value=succeeded):
-        extracted = ImageTextExtractor().extract_text(_SCAN_PATH, "png")
+        extracted = ImageTextExtractor(_DEFAULT_RECOGNIZER).extract_text(
+            _SCAN_PATH, "png"
+        )
 
     assert extracted == body.strip()
 
 
 @settings(max_examples=50)
-@given(
-    _STEMS, _IMAGE_EXTENSIONS, st.sampled_from(_TEXT_RECOGNIZER_BINARIES)
-)
+@given(_STEMS, _IMAGE_EXTENSIONS, st.sampled_from(_TEXT_RECOGNIZER_BINARIES))
 def test_extract_text_property_image_runs_the_configured_tesseract(
     stem: str, extension: str, binary: str
 ) -> None:
     filename = f"/work/{stem}.{extension}"
     succeeded = _recognition(0, b"", b"")
 
-    with (
-        mock.patch(_CONFIGURED_BINARY, binary),
-        mock.patch(_SUBPROCESS_RUN, return_value=succeeded) as run,
-    ):
-        _ = ImageTextExtractor().extract_text(filename, extension)
+    with mock.patch(_SUBPROCESS_RUN, return_value=succeeded) as run:
+        _ = ImageTextExtractor(binary).extract_text(filename, extension)
 
     command = cast("list[str]", run.call_args.args[0])
 
@@ -85,11 +79,10 @@ def test_extract_text_property_image_names_a_missing_recognizer(
     missing = FileNotFoundError(binary)
 
     with (
-        mock.patch(_CONFIGURED_BINARY, binary),
         mock.patch(_SUBPROCESS_RUN, side_effect=missing),
         pytest.raises(TextRecognitionError) as refusal,
     ):
-        _ = ImageTextExtractor().extract_text(_SCAN_PATH, "png")
+        _ = ImageTextExtractor(binary).extract_text(_SCAN_PATH, "png")
 
     assert str(refusal.value) == f"{_RECOGNIZER_MISSING} at {binary}"
 
@@ -105,4 +98,6 @@ def test_extract_text_property_image_reports_whatever_tesseract_complained(
         mock.patch(_SUBPROCESS_RUN, return_value=failed),
         pytest.raises(TextRecognitionError, match="it went wrong"),
     ):
-        _ = ImageTextExtractor().extract_text(_SCAN_PATH, "png")
+        _ = ImageTextExtractor(_DEFAULT_RECOGNIZER).extract_text(
+            _SCAN_PATH, "png"
+        )
