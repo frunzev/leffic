@@ -4,13 +4,17 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../support/hosting.dart';
 import 'ask_requirement_steps.dart';
+import 'file_requirement_steps.dart';
 import 'folder_requirement_steps.dart';
 import 'gherkin_scenarios.dart';
+import 'import_requirement_steps.dart';
 import 'note_requirement_steps.dart';
 import 'requirement_world.dart';
 import 'review_requirement_steps.dart';
 import 'settings_requirement_steps.dart';
+import 'startup_requirement_steps.dart';
 import 'step_definition.dart';
+import 'test_requirement_steps.dart';
 
 const String _requirementsDirectory = '../../../requirements';
 const String _featureSuffix = '.feature';
@@ -21,6 +25,10 @@ final List<StepDefinition> _uiStepDefinitions = [
   ...askStepDefinitions,
   ...noteStepDefinitions,
   ...settingsStepDefinitions,
+  ...startupStepDefinitions,
+  ...testStepDefinitions,
+  ...fileStepDefinitions,
+  ...importStepDefinitions,
   StepDefinition('Then', RegExp(r'^the app shows "(.+)"$'), _checkShown),
   StepDefinition('Then', RegExp(r'^the app offers "(.+)"$'), _checkShown),
 ];

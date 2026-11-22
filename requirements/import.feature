@@ -19,6 +19,18 @@ Feature: Import
       Then home contains no deck and no test
       And only a note is being generated
 
+    @ui
+    Scenario: Importing pasted text in the app asks for all three by default
+      Given the backend accepts imports
+      When I import the text "Cells are the unit of life." in the app
+      Then the backend was asked to generate flashcards, a note and a test from "Cells are the unit of life."
+
+    @ui
+    Scenario: Unticking the test in the app leaves the test out
+      Given the backend accepts imports
+      When I import the text "Cells are the unit of life." in the app without "Test"
+      Then the backend was asked to generate flashcards and a note from "Cells are the unit of life."
+
   Rule: A finished generation fills the deck, the test and the note
 
     Scenario: Generated cards fill the new deck

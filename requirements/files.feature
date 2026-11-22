@@ -39,6 +39,17 @@ Feature: Files
       When I read the text out of "essay.docx"
       Then I am told LibreOffice is not installed
 
+    @ui
+    Scenario: Settings offers LibreOffice when it is missing
+      When I open Settings in the app
+      Then the app offers "Download"
+
+    @ui
+    Scenario: Downloading LibreOffice in Settings installs it
+      When I open Settings in the app
+      And I press "Download"
+      Then the app offers "Remove"
+
   Rule: Deleting a file also removes it from disk
 
     Scenario: A deleted file leaves nothing on disk
@@ -65,3 +76,18 @@ Feature: Files
       And I stopped reading "cells.pdf" on page 2
       When I remove the bookmark of "cells.pdf"
       Then "cells.pdf" has no bookmark
+
+    @ui
+    Scenario: Bookmarking the page in view in the app saves it
+      Given the backend keeps bookmarks for the 3-page file "cells.pdf"
+      When I read "cells.pdf" in the app as far as page 2
+      And I bookmark the page in view
+      Then the backend saved page 2 of "cells.pdf"
+      And the app offers to remove the bookmark on page 2
+
+    @ui
+    Scenario: A bookmarked file opens on its page in the app
+      Given the backend keeps bookmarks for the 3-page file "cells.pdf" bookmarked on page 2
+      When I read "cells.pdf" in the app
+      Then the app offers to remove the bookmark on page 2
+

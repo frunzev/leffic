@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:leffic/features/settings/masked_api_key.dart';
 import 'package:leffic/features/settings/settings_page.dart';
 import 'package:leffic/shared/design/segmented_control.dart';
 import 'package:leffic/shared/settings/app_preferences.dart';
@@ -12,7 +13,6 @@ import '../features/settings/settings_fakes.dart';
 import 'requirement_world.dart';
 import 'step_definition.dart';
 
-const String _claudeCodeLocation = '/Users/someone/.local/bin/claude';
 const String _saveKey = 'Save key';
 const String _preferencesFolderPrefix = 'requirement-settings';
 
@@ -41,7 +41,7 @@ SettingsPage _settingsPage(UiWorld world, Directory preferencesDirectory) {
     relaunchBackend: world.relauncher.relaunch,
     keyStore: OpenAiKeyStore(world.keychain.run),
     findPreferencesDirectory: () async => preferencesDirectory,
-    findClaudeCode: () async => _claudeCodeLocation,
+    findClaudeCode: () async => world.claudeCodeLocation,
     runInstallerCommand: (command, input) async => ProcessResult(0, 0, '', ''),
   );
 }
@@ -59,7 +59,22 @@ Future<void> _openSettingsWith(
   UiWorld world,
   List<String> values,
 ) async {
-  final engine = _engineLabelled(values.single);
+  await _openSettings(tester, world, _engineLabelled(values.single));
+}
+
+Future<void> _openDefaultSettings(
+  WidgetTester tester,
+  UiWorld world,
+  List<String> values,
+) async {
+  await _openSettings(tester, world, ChatEngineChoice.claudeCode);
+}
+
+Future<void> _openSettings(
+  WidgetTester tester,
+  UiWorld world,
+  ChatEngineChoice engine,
+) async {
   final directory = await tester.runAsync(() => _preferencesWith(engine));
   final settingsPage = _settingsPage(world, directory!);
 
@@ -121,11 +136,71 @@ Future<void> _checkRelaunchedOnce(
   expect(world.relauncher.relaunched, [world.link]);
 }
 
+Future<void> _installClaudeCodeAt(
+  WidgetTester tester,
+  UiWorld world,
+  List<String> values,
+) async {
+  world.claudeCodeLocation = values.single;
+}
+
+Future<void> _removeClaudeCode(
+  WidgetTester tester,
+  UiWorld world,
+  List<String> values,
+) async {
+  world.claudeCodeLocation = null;
+}
+
+Future<void> _storeOpenAiKey(
+  WidgetTester tester,
+  UiWorld world,
+  List<String> values,
+) async {
+  world.keychain = RecordingKeychain(0, storedKey: values.single);
+}
+
+Future<void> _checkKeyMasked(
+  WidgetTester tester,
+  UiWorld world,
+  List<String> values,
+) async {
+  final key = values.single;
+
+  expect(find.text(maskApiKey(key)), findsOneWidget);
+  expect(find.text(key), findsNothing);
+}
+
 final List<StepDefinition> settingsStepDefinitions = [
+  StepDefinition(
+    'Given',
+    RegExp(r'^Claude Code is installed at "(.+)"$'),
+    _installClaudeCodeAt,
+  ),
+  StepDefinition(
+    'Given',
+    RegExp(r'^Claude Code is not on this Mac$'),
+    _removeClaudeCode,
+  ),
+  StepDefinition(
+    'Given',
+    RegExp(r'^the Keychain holds the OpenAI key "(.+)"$'),
+    _storeOpenAiKey,
+  ),
+  StepDefinition(
+    'Then',
+    RegExp(r'^the app shows the OpenAI key "(.+)" only masked$'),
+    _checkKeyMasked,
+  ),
   StepDefinition(
     'Given',
     RegExp(r'^Settings has "(.+)" chosen as the engine$'),
     _openSettingsWith,
+  ),
+  StepDefinition(
+    'When',
+    RegExp(r'^I open Settings in the app$'),
+    _openDefaultSettings,
   ),
   StepDefinition(
     'When',

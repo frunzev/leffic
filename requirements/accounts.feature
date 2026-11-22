@@ -173,6 +173,12 @@ Feature: Accounts
       When I save the Gemini key "gm-live-22222222222222225Kc9"
       Then my saved keys show "5Kc9" but never the key itself
 
+    @ui
+    Scenario: The app shows a saved OpenAI key only masked
+      Given the Keychain holds the OpenAI key "sk-live-000000000000000007Xa2"
+      When I open Settings in the app
+      Then the app shows the OpenAI key "sk-live-000000000000000007Xa2" only masked
+
   Rule: A saved key opens only with my password
 
     @accounts

@@ -3,6 +3,8 @@ import 'package:flutter/widgets.dart';
 import '../api/api_client.dart';
 import '../backend/backend_process.dart';
 
+typedef BackendRelauncher = Future<void> Function(BackendLink link);
+
 class BackendLink extends ValueNotifier<ApiClient?> {
   BackendLink() : super(null);
 

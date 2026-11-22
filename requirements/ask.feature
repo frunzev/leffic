@@ -20,6 +20,12 @@ Feature: Ask
       Then the app shows "What is a cell?"
       And the app shows "Cells are the unit of life."
 
+    @ui
+    Scenario: Settings shows where Claude Code was found
+      Given Claude Code is installed at "/Users/someone/.local/bin/claude"
+      When I open Settings in the app
+      Then the app shows "Claude Code found at /Users/someone/.local/bin/claude"
+
   Rule: Ask uses OpenAI when that engine is chosen
 
     Scenario: OpenAI answers the question
@@ -66,6 +72,13 @@ Feature: Ask
       Given Ask is unavailable with "Claude Code did not answer. Check that it is installed and logged in."
       When I ask "What is a cell?" in the app
       Then the app shows "Claude Code did not answer. Check that it is installed and logged in."
+
+    @ui
+    Scenario: Settings offers to install a missing Claude Code
+      Given Claude Code is not on this Mac
+      When I open Settings in the app
+      Then the app shows "Not found on this Mac. The Ask chat runs on Claude Code."
+      And the app offers "Install Claude Code"
 
   Rule: Ask can list my folders
 

@@ -52,7 +52,7 @@ Widget pageFor(RouteSettings settings) {
     (Routes.settings, _) => const SettingsPage(
       relaunchBackend: relaunchBackendInPlace,
     ),
-    _ => const StartupPage(),
+    _ => const StartupPage(relaunchBackend: relaunchBackendInPlace),
   };
 }
 

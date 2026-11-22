@@ -17,6 +17,20 @@ Feature: Tests
       And I finish the test "Mammals"
       Then I got 0 answers right and missed "Which is a mammal?"
 
+    @ui
+    Scenario: Taking a test in the app shows my score
+      Given the backend has the test "Mammals" asking "Which is a mammal?" with "whale" right and "shark" wrong
+      When I take the test "Mammals" in the app choosing "whale"
+      Then the backend received my answer "whale"
+      And the app shows "1 / 1"
+
+    @ui
+    Scenario: A wrong choice in the app is scored as missed
+      Given the backend has the test "Mammals" asking "Which is a mammal?" with "whale" right and "shark" wrong
+      When I take the test "Mammals" in the app choosing "shark"
+      Then the backend received my answer "shark"
+      And the app shows "0 / 1"
+
   Rule: A true or false question scores my answer
 
     Scenario: A true statement answered True counts as correct

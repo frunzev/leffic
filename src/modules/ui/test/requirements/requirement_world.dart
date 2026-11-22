@@ -1,3 +1,5 @@
+import 'package:flutter/widgets.dart';
+import 'package:leffic/features/files/file_models.dart';
 import 'package:leffic/shared/api/api_client.dart';
 import 'package:leffic/shared/session/backend_scope.dart';
 
@@ -19,8 +21,12 @@ class UiWorld {
     '3': 900,
     '4': 9000,
   };
-  final RecordingRelauncher relauncher = RecordingRelauncher();
-  final RecordingKeychain keychain = RecordingKeychain(0);
+  RecordingRelauncher relauncher = RecordingRelauncher();
+  final List<RouteSettings> openedRoutes = [];
+  final Map<String, int> optionIds = {};
+  final Map<String, StoredFileDetails> fileDetails = {};
+  RecordingKeychain keychain = RecordingKeychain(0);
+  String? claudeCodeLocation = '/Users/someone/.local/bin/claude';
   final BackendLink link = connectedLink();
   FakeBackend? _backend;
 

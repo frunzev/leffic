@@ -40,6 +40,7 @@ pytest_plugins = [
     "tests.requirements.ask_tool_steps",
     "tests.requirements.openai_steps",
     "tests.requirements.account_deletion_steps",
+    "tests.requirements.desktop_steps",
 ]
 
 

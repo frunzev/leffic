@@ -27,7 +27,6 @@ import 'settings_panel.dart';
 
 typedef PreferencesDirectoryFinder = Future<Directory> Function();
 typedef SettingsSnapshot = ({String? storedKey, AppPreferences preferences});
-typedef BackendRelauncher = Future<void> Function(BackendLink link);
 
 const String _componentsTitle = 'Components';
 const String _componentsText =

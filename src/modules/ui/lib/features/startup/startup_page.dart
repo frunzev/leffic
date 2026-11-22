@@ -5,12 +5,13 @@ import '../../shared/navigation/routes.dart';
 import '../../shared/session/backend_scope.dart';
 import '../../shared/widgets/captioned_spinner.dart';
 import '../../shared/widgets/load_view.dart';
-import 'backend_relaunch.dart';
 
 enum _StartupStage { starting, failed }
 
 class StartupPage extends StatefulWidget {
-  const StartupPage({super.key});
+  const StartupPage({required this.relaunchBackend, super.key});
+
+  final BackendRelauncher relaunchBackend;
 
   @override
   State<StartupPage> createState() => _StartupPageState();
@@ -33,7 +34,7 @@ class _StartupPageState extends State<StartupPage> {
     setState(() => _stage = _StartupStage.starting);
 
     try {
-      await relaunchBackendInPlace(link);
+      await widget.relaunchBackend(link);
     } on BackendStartError catch (failure) {
       if (mounted) {
         setState(() {
