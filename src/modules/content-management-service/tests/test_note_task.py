@@ -59,7 +59,7 @@ def _run_note(
     with (
         mock.patch.object(
             generation_tasks,
-            "ai_factory",
+            "chosen_ai_factory",
             factory or FakeFactory(FakeAi(answer)),
         ),
         mock.patch.object(generation_tasks, "SessionLocal", sessions),

@@ -69,7 +69,7 @@ def _run_test(
     with (
         mock.patch.object(
             generation_tasks,
-            "ai_factory",
+            "chosen_ai_factory",
             factory or FakeFactory(FakeAi(answer)),
         ),
         mock.patch.object(generation_tasks, "SessionLocal", sessions),

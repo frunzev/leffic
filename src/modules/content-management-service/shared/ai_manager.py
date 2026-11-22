@@ -9,6 +9,7 @@ from openai.types.responses import (
     ResponseInputItemParam,
 )
 
+from shared.json_answerer import JsonAnswerer
 from shared.json_extraction import get_dict_from_text
 from shared.model_rates import GPT_5_MINI, MODEL_RATES, ModelRates
 
@@ -18,12 +19,7 @@ _ALL_ATTEMPTS_FAILED = "The AI model did not answer"
 AiMessage = ResponseInputItemParam
 
 
-class AIManager(ABC):
-    @abstractmethod
-    def get_ai_res(
-        self, system_prompt: str, user_prompt: str
-    ) -> tuple[dict[str, object], float | None]: ...
-
+class AIManager(JsonAnswerer, ABC):
     @abstractmethod
     def get_ai_res_hist(
         self, system_prompt: str, history: list[AiMessage]
@@ -32,7 +28,6 @@ class AIManager(ABC):
 
 class RequestCost:
     def __init__(self, rates: ModelRates | None) -> None:
-        super().__init__()
         self.rates: ModelRates | None = rates
 
     def of(self, response: Response) -> float | None:
@@ -54,7 +49,6 @@ class OpenAIManager(AIManager):
     def __init__(
         self, client: OpenAI, model_name: str, request_cost: RequestCost
     ) -> None:
-        super().__init__()
         self.client: OpenAI = client
         self.model_name: str = model_name
         self.request_cost: RequestCost = request_cost
@@ -64,9 +58,7 @@ class OpenAIManager(AIManager):
         self, system_prompt: str, user_prompt: str
     ) -> tuple[dict[str, object], float | None]:
         history: list[AiMessage] = [
-            EasyInputMessageParam(
-                role="developer", content=system_prompt
-            ),
+            EasyInputMessageParam(role="developer", content=system_prompt),
             EasyInputMessageParam(role="user", content=user_prompt),
         ]
         last_error: OpenAIError | None = None
@@ -90,9 +82,7 @@ class OpenAIManager(AIManager):
         self, system_prompt: str, history: list[AiMessage]
     ) -> str:
         conversation: list[AiMessage] = [
-            EasyInputMessageParam(
-                role="developer", content=system_prompt
-            ),
+            EasyInputMessageParam(role="developer", content=system_prompt),
             *history,
         ]
 
@@ -109,7 +99,6 @@ AIBuilder = Callable[[str, ModelRates | None], AIManager]
 
 class AIFactory:
     def __init__(self, builder: AIBuilder) -> None:
-        super().__init__()
         self._builder: AIBuilder = builder
 
     def get_ai(self, model: str | None = None) -> AIManager:

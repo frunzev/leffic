@@ -40,7 +40,7 @@ class UnavailableEngine(ChatEngine):
 def test_provide_chat_engine_property_picks_claude_code_when_configured(
     engine_name: str,
 ) -> None:
-    with mock.patch.object(chatbot_module, "CHAT_ENGINE", engine_name):
+    with mock.patch.object(chatbot_module, "CHOSEN_AI_ENGINE", engine_name):
         engine = chatbot_module.provide_chat_engine()
 
     assert isinstance(engine, ClaudeCodeChatEngine)
@@ -51,7 +51,7 @@ def test_provide_chat_engine_property_picks_claude_code_when_configured(
 def test_provide_chat_engine_property_falls_back_to_openai(
     engine_name: str,
 ) -> None:
-    with mock.patch.object(chatbot_module, "CHAT_ENGINE", engine_name):
+    with mock.patch.object(chatbot_module, "CHOSEN_AI_ENGINE", engine_name):
         engine = chatbot_module.provide_chat_engine()
 
     assert isinstance(engine, OpenAIChatEngine)

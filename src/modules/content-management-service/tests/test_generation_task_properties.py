@@ -55,7 +55,7 @@ def test__generate_flashcards_of_type_task_property_reports_its_type(
     appending = RecordingAppend(len(cards))
 
     with mock.patch.object(
-        generation_tasks, "ai_factory", _answering(payload)
+        generation_tasks, "chosen_ai_factory", _answering(payload)
     ), mock.patch.object(
         generation_tasks, "SessionLocal"
     ), mock.patch.object(
@@ -97,7 +97,7 @@ def test__generate_test_items_of_type_task_property_reports_its_type(
     answering = _answering(payload)
 
     with mock.patch.object(
-        generation_tasks, "ai_factory", answering
+        generation_tasks, "chosen_ai_factory", answering
     ), mock.patch.object(
         generation_tasks, "SessionLocal"
     ), mock.patch.object(
@@ -133,7 +133,7 @@ def test__generate_note_task_property_reports_the_note_it_saved(
     saving = RecordingSave(str(note_id))
 
     with mock.patch.object(
-        generation_tasks, "ai_factory", _answering(payload)
+        generation_tasks, "chosen_ai_factory", _answering(payload)
     ), mock.patch.object(
         generation_tasks, "SessionLocal"
     ), mock.patch.object(generation_tasks, "save_note", saving):

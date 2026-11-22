@@ -22,7 +22,7 @@ from features.study_units_generation.study_unit_types import (
     study_unit_type,
 )
 from features.study_units_generation.study_unit_writer import save_note
-from shared.ai_manager import ai_factory
+from shared.chosen_ai_engine import chosen_ai_factory
 from shared.database import SessionLocal
 
 _DECK_NAME = "deck_name"
@@ -48,7 +48,7 @@ def _generate_flashcards_of_type_task(
     settings: FlashcardGenerationSettings,
 ) -> dict[str, object]:
     unit_type = study_unit_type(flashcard_type)
-    ai = ai_factory.get_ai(ai_model)
+    ai = chosen_ai_factory.get_ai(ai_model)
     generated, _unused = ai.get_ai_res(
         system_prompt=rendered_prompt(
             unit_type.prompt_file,
@@ -83,7 +83,7 @@ def _generate_test_items_of_type_task(
     amount: int | None,
 ) -> dict[str, object]:
     unit_type = study_unit_type(item_type)
-    ai = ai_factory.get_ai(ai_model)
+    ai = chosen_ai_factory.get_ai(ai_model)
     generated, _unused = ai.get_ai_res(
         system_prompt=rendered_prompt(
             unit_type.prompt_file, assessment_item_values(amount)
@@ -112,7 +112,7 @@ def _generate_note_task(
     source_kind: str | None,
     source_reference: str | None,
 ) -> dict[str, object]:
-    ai = ai_factory.get_ai(ai_model)
+    ai = chosen_ai_factory.get_ai(ai_model)
     note, _unused = ai.get_ai_res(
         system_prompt=rendered_prompt(NOTE_PROMPT_FILE, {}),
         user_prompt=extracted_text,

@@ -74,12 +74,12 @@ void main() {
     );
 
     final row = tester.getRect(find.byType(RuledBlock));
-    final label = tester.getRect(find.text('Chat engine'));
+    final label = tester.getRect(find.text('AI engine'));
     final value = tester.getRect(find.text(chatEngineRestartNote));
     final control = tester.getRect(
       find.byType(SegmentedControl<ChatEngineChoice>),
     );
-    final labelStyle = renderedStyleOf(tester, 'Chat engine');
+    final labelStyle = renderedStyleOf(tester, 'AI engine');
     final valueStyle = renderedStyleOf(tester, chatEngineRestartNote);
     final labelBlockCentre = (label.top + value.bottom) / 2;
 

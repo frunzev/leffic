@@ -1,13 +1,6 @@
-import asyncio
-from collections.abc import AsyncIterator, Callable
 from typing import override
 
-from claude_agent_sdk import (
-    ClaudeAgentOptions,
-    ClaudeSDKError,
-    Message,
-    ResultMessage,
-)
+from claude_agent_sdk import ClaudeAgentOptions
 from sqlalchemy.orm import Session, sessionmaker
 
 from features.chatbot.chat_engine import (
@@ -21,8 +14,11 @@ from features.chatbot.study_toolset import (
     STUDY_TOOL_NAMES,
     StudyToolset,
 )
-
-QueryRunner = Callable[..., AsyncIterator[Message]]
+from shared.claude_code_run import (
+    ClaudeCodeUnavailableError,
+    QueryRunner,
+    run_claude_code,
+)
 
 _SYSTEM_PROMPT = (
     "You are the study assistant inside Leffic. Answer shortly and "
@@ -30,9 +26,6 @@ _SYSTEM_PROMPT = (
     "and flashcard decks, and to add flashcards when the user asks."
 )
 _MAXIMUM_TURNS = 8
-_CLAUDE_CODE_UNAVAILABLE = (
-    "Claude Code did not answer. Check that it is installed and logged in."
-)
 _TURN_SEPARATOR = "\n\n"
 
 
@@ -58,11 +51,11 @@ class ClaudeCodeChatEngine(ChatEngine):
         prompt = rendered_prompt(conversation)
 
         try:
-            return asyncio.run(self._final_answer(prompt, options))
-        except ClaudeSDKError as unavailable:
-            raise ChatEngineUnavailableError(
-                _CLAUDE_CODE_UNAVAILABLE
-            ) from unavailable
+            reply = run_claude_code(self._run_query, prompt, options)
+        except ClaudeCodeUnavailableError as unavailable:
+            raise ChatEngineUnavailableError(str(unavailable)) from unavailable
+
+        return reply.text
 
     def _options(self, user_id: str) -> ClaudeAgentOptions:
         toolset = StudyToolset(StudyLibrary(self._sessions, user_id))
@@ -75,22 +68,3 @@ class ClaudeCodeChatEngine(ChatEngine):
             setting_sources=[],
             max_turns=_MAXIMUM_TURNS,
         )
-
-    async def _final_answer(
-        self, prompt: str, options: ClaudeAgentOptions
-    ) -> str:
-        final_message: ResultMessage | None = None
-
-        async for message in self._run_query(prompt=prompt, options=options):
-            if isinstance(message, ResultMessage):
-                final_message = message
-
-        if final_message is None or final_message.is_error:
-            raise ChatEngineUnavailableError(_CLAUDE_CODE_UNAVAILABLE)
-
-        final_answer = final_message.result
-
-        if final_answer is None:
-            raise ChatEngineUnavailableError(_CLAUDE_CODE_UNAVAILABLE)
-
-        return final_answer

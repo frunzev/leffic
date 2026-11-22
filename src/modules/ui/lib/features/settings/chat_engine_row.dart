@@ -40,7 +40,7 @@ class ChatEngineRow extends StatelessWidget {
               spacing: Spacing.step1,
               children: [
                 Text(
-                  'Chat engine',
+                  'AI engine',
                   style: textStyleForSize(TextSizes.medium)
                       .copyWith(color: colors.ink),
                 ),

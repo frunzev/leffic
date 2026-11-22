@@ -72,7 +72,7 @@ def _generate(
     factory = FakeFactory(FakeAi(answer))
 
     with (
-        mock.patch.object(generation_tasks, "ai_factory", factory),
+        mock.patch.object(generation_tasks, "chosen_ai_factory", factory),
         mock.patch.object(generation_tasks, "SessionLocal", sessions),
     ):
         result = generation_tasks._generate_flashcards_of_type_task(
