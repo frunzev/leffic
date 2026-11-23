@@ -23,7 +23,7 @@ async def rating_intervals(
     _ = user_id
 
     try:
-        intervals = get_ratings_times(request_data.card, None)
+        intervals = get_ratings_times(request_data.card)
     except UnreadableCardError as unreadable:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

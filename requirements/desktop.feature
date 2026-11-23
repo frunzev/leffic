@@ -29,6 +29,10 @@ Feature: Desktop backend
       When the app keeps running
       Then the desktop backend keeps running
 
+    Scenario: Stopping the backend ends its own process
+      When the desktop backend stops its own process
+      Then it sends its own process the termination signal
+
   Rule: The desktop backend listens only on this Mac, on the port the app chose
 
     Scenario: Every unprivileged port the app chooses is accepted
@@ -36,6 +40,9 @@ Feature: Desktop backend
 
     Scenario: A privileged or impossible port is refused
       Then every port below 1024 or above 65535 is refused for the desktop backend
+
+    Scenario: A port that is not a whole number is refused
+      Then every port that is not a whole number is refused for the desktop backend
 
     Scenario: The desktop backend listens only on this Mac
       When the desktop backend starts on port 4100 for the app with process id 4242
@@ -48,6 +55,17 @@ Feature: Desktop backend
 
     Scenario: Process id 1 is refused as the app
       Then the app process id 1 is refused
+
+  Rule: The desktop backend generates study units without a separate worker
+
+    Scenario: Queued generation finishes inside the backend
+      When the desktop backend starts its generation worker
+      And a generation job doubling 21 is queued
+      Then the job finishes inside the backend with 42
+
+    Scenario: The generation worker never keeps the backend alive
+      When the desktop backend starts its generation worker
+      Then the worker thread ends with the backend
 
   Rule: The desktop backend brings its database up to date when it starts
 

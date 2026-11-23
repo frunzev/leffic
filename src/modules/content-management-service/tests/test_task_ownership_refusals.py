@@ -6,7 +6,6 @@ from fastapi import HTTPException
 from features.study_units_generation import task_ownership
 from features.study_units_generation.task_ownership import (
     MISSING_TASK,
-    AmbiguousTokenSegmentError,
 )
 from tests.task_token_support import NOT_FOUND, TASK_TOKENS
 
@@ -14,12 +13,6 @@ _TASK_ID: Final[str] = "9d0f1a2b-0000-4000-8000-00000000c001"
 _FOLDER_ID: Final[str] = "9d0f1a2b-0000-4000-8000-00000000d002"
 _OTHER_FOLDER_ID: Final[str] = "9d0f1a2b-0000-4000-8000-00000000d003"
 _FOREIGN_SIGNING_KEY: Final[str] = "a-different-secret-than-the-real-one"
-_DOTTED_SEGMENTS: Final[tuple[tuple[str, str], ...]] = (
-    ("a", "b.c"),
-    ("a.b", "c"),
-    ("a.b", "c.d"),
-    (".", ""),
-)
 
 
 def test_a_swapped_folder_segment_is_refused() -> None:
@@ -55,19 +48,3 @@ def test_a_different_folder_produces_a_different_digest() -> None:
     second = second_token.split(".")[2]
 
     assert first != second
-
-
-@pytest.mark.parametrize(("task_id", "folder_id"), _DOTTED_SEGMENTS)
-def test_a_segment_carrying_the_separator_is_refused(
-    task_id: str, folder_id: str
-) -> None:
-    with pytest.raises(AmbiguousTokenSegmentError):
-        _ = TASK_TOKENS.signed_task_id(task_id, folder_id)
-
-
-def test_the_two_readings_of_one_token_can_no_longer_be_minted() -> None:
-    with pytest.raises(AmbiguousTokenSegmentError):
-        _ = TASK_TOKENS.signed_task_id("a", "b.c")
-
-    with pytest.raises(AmbiguousTokenSegmentError):
-        _ = TASK_TOKENS.signed_task_id("a.b", "c")

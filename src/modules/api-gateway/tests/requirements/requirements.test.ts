@@ -10,6 +10,7 @@ import {
   type GatewayWorld,
   gatewayStepDefinitions,
 } from "./gateway-steps";
+import { signInStepDefinitions } from "./sign-in-steps";
 
 const REQUIREMENTS_DIRECTORY = "../../../requirements";
 const FEATURE_SUFFIX = ".feature";
@@ -32,7 +33,9 @@ function gatewayScenarios(): readonly GherkinScenario[] {
 }
 
 function runStep(world: GatewayWorld, step: GherkinStep): void {
-  for (const definition of gatewayStepDefinitions) {
+  const definitions = [...gatewayStepDefinitions, ...signInStepDefinitions];
+
+  for (const definition of definitions) {
     if (definition.keyword !== step.keyword) {
       continue;
     }
@@ -57,7 +60,7 @@ describe("gateway requirements", () => {
 
   for (const scenario of scenarios) {
     test(scenario.name, () => {
-      const world: GatewayWorld = { answers: [] };
+      const world: GatewayWorld = { answers: [], errors: [] };
 
       for (const step of scenario.steps) {
         runStep(world, step);

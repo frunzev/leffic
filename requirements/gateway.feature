@@ -19,6 +19,11 @@ Feature: Gateway
       When a content upload declaring 100 MB reaches the gateway
       Then the gateway passes it on
 
+    @gateway
+    Scenario: A sign-up declared over 100 MB is refused with 413
+      When a sign-up declaring 101 MB reaches the gateway
+      Then the gateway refuses it with 413
+
   Rule: Sign-ins and costly generation are rate limited per client
 
     @gateway

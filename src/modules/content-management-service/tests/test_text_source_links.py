@@ -26,7 +26,7 @@ def test_text_from_link_property_reads_every_youtube_link_from_its_transcript(
 
     with (
         mock.patch.object(
-            link_text, "get_youtube_transcript_auto", return_value="spoken"
+            link_text, "transcript_of_video", return_value="spoken"
         ),
         mock.patch.object(
             link_text, "extract_link_main_content", return_value="page"
@@ -39,11 +39,11 @@ def test_a_youtube_link_uses_the_transcript() -> None:
     link = "https://youtube.com/watch?v=x"
 
     with mock.patch.object(
-        link_text, "get_youtube_transcript_auto", return_value="spoken"
+        link_text, "transcript_of_video", return_value="spoken"
     ) as transcript:
         assert _LINK_TEXT.text_from_link(link) == "spoken"
 
-    assert transcript.call_args.args[0] == link
+    assert transcript.call_args.args[0] == "x"
 
 
 def test_a_youtube_link_without_a_transcript_reads_the_page() -> None:
@@ -51,7 +51,7 @@ def test_a_youtube_link_without_a_transcript_reads_the_page() -> None:
 
     with (
         mock.patch.object(
-            link_text, "get_youtube_transcript_auto", return_value=None
+            link_text, "transcript_of_video", return_value=None
         ),
         mock.patch.object(
             link_text, "extract_link_main_content", return_value="page"

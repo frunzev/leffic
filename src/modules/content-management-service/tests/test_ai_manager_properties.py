@@ -6,8 +6,7 @@ from unittest import mock
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
-from openai import OpenAI, OpenAIError
-from openai.types.responses import Response
+from openai import OpenAIError
 
 from shared.ai_manager import (
     AiMessage,
@@ -17,17 +16,19 @@ from shared.ai_manager import (
     create_openai_factory,
 )
 from shared.model_rates import GPT_4_1_NANO, GPT_5_MINI, MODEL_RATES
-from tests.test_ai_manager import FakeClient, FakeResponse, FakeUsage
+from tests.openai_fakes import (
+    FakeClient,
+    FakeResponse,
+    FakeUsage,
+    as_response,
+    openai_manager,
+)
 
 _SYSTEM_PROMPT = "You are helpful"
 _USER_PROMPT = "Summarise this"
 _TOKENS = st.integers(min_value=0, max_value=10_000)
 _SCALES = st.integers(min_value=2, max_value=8)
 _TOLERANCE = 1e-9
-def _as_response(fake: FakeResponse) -> Response:
-    return cast("Response", cast("object", fake))
-
-
 def _sent(client: FakeClient, key: str) -> object:
     return cast("dict[str, object]", client.responses.calls[0])[key]
 
@@ -42,14 +43,7 @@ _ANSWERS = st.dictionaries(
 def _manager(
     answers: list[object], model: str = GPT_4_1_NANO
 ) -> tuple[OpenAIManager, FakeClient]:
-    client = FakeClient(answers)
-    manager = OpenAIManager(
-        cast("OpenAI", cast("object", client)),
-        model,
-        RequestCost(MODEL_RATES.get(model)),
-    )
-
-    return manager, client
+    return openai_manager(answers, model, MODEL_RATES.get(model))
 
 
 @settings(max_examples=50)
@@ -59,12 +53,12 @@ def test_of_property_scales_with_the_tokens_it_counts(
 ) -> None:
     cost = RequestCost(MODEL_RATES[GPT_4_1_NANO])
     once = cost.of(
-        _as_response(
+        as_response(
             FakeResponse("", FakeUsage(input_tokens, output_tokens, cached))
         )
     )
     scaled = cost.of(
-        _as_response(
+        as_response(
             FakeResponse(
                 "",
                 FakeUsage(
@@ -91,7 +85,7 @@ def test___init___property_keeps_the_rates_it_was_handed(
     assert without_rates.rates is None
     assert (
         without_rates.of(
-            _as_response(
+            as_response(
                 FakeResponse(
                     "", FakeUsage(input_tokens, output_tokens, cached)
                 )
@@ -204,3 +198,17 @@ def test_client_property_creates_one_client_on_first_use(
     clients = [source.client() for _ in range(calls)]
 
     assert all(client is clients[0] for client in clients)
+
+
+@settings(max_examples=50)
+@given(_TOKENS, st.sampled_from([GPT_4_1_NANO, GPT_5_MINI]))
+def test_of_property_charges_cached_tokens_only_at_the_cached_rate(
+    cached: int, model: str
+) -> None:
+    rates = MODEL_RATES[model]
+    all_cached = FakeResponse("", FakeUsage(cached, 0, cached))
+
+    cost = RequestCost(rates).of(as_response(all_cached))
+
+    assert cost is not None
+    assert abs(cost - cached * rates.cached_token_cost) < _TOLERANCE

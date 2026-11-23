@@ -3,6 +3,7 @@ import uuid
 from typing import BinaryIO, cast
 from unittest import mock
 
+import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 from pika.exceptions import AMQPError
@@ -196,8 +197,9 @@ def test__on_message_property_acknowledges_only_what_it_handled(
     with mock.patch.object(consumer_module, "handle"):
         _on_message(channel, _Delivery(delivery_tag), None, b"{}")
 
-    with mock.patch.object(
-        consumer_module, "handle", side_effect=AMQPError
+    with (
+        mock.patch.object(consumer_module, "handle", side_effect=AMQPError),
+        pytest.raises(AMQPError),
     ):
         _on_message(channel, _Delivery(delivery_tag + 1), None, b"{}")
 

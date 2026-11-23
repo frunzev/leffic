@@ -16,6 +16,8 @@ _PROVIDER_KEYS = "/account/provider-keys"
 _OPEN_KEY = "/account/provider-keys/{provider}/open"
 _REMOVE_KEY = "/account/provider-keys/{provider}"
 _PROVIDERS = {"OpenAI": "openai", "Gemini": "gemini"}
+_ANY_KEY = "sk-live-000000000000000007Xa2"
+_BLANK_KEY = "   "
 _SAVE_KEY_STEP = 'I save the {provider_name} key "{provider_key}"'
 _SAVED_KEY_STEP = 'I saved the {provider_name} key "{provider_key}"'
 _SAVED_AGAIN_STEP = (
@@ -34,14 +36,20 @@ _LIMITED_KEY_STEP = (
 SavedKey = dict[str, object]
 
 
-def _saved_key(
+def _attempted_key_save(
     account_client: TestClient, key_request: dict[str, object]
-) -> None:
-    reply = account_client.put(
+) -> Response:
+    return account_client.put(
         _PROVIDER_KEYS,
         json=key_request,
         headers=access_headers(account_client),
     )
+
+
+def _saved_key(
+    account_client: TestClient, key_request: dict[str, object]
+) -> None:
+    reply = _attempted_key_save(account_client, key_request)
     _ = reply.raise_for_status()
 
 
@@ -189,3 +197,29 @@ def check_key_unlimited(
 
     assert saved_key["provider"] == _PROVIDERS[provider_name]
     assert saved_key["monthly_limit_cents"] is None
+
+
+@when(
+    parsers.parse('I save a key for the provider "{provider}"'),
+    target_fixture="reply",
+)
+def save_key_for_unknown_provider(
+    account_client: TestClient, provider: str
+) -> Response:
+    key_request: dict[str, object] = {
+        "provider": provider,
+        "key": _ANY_KEY,
+        "password": SIGN_UP_PHRASE,
+    }
+
+    return _attempted_key_save(account_client, key_request)
+
+
+@when(
+    parsers.parse("I save a blank {provider_name} key"),
+    target_fixture="reply",
+)
+def save_blank_key(account_client: TestClient, provider_name: str) -> Response:
+    key_request = _key_request(provider_name, _BLANK_KEY, SIGN_UP_PHRASE)
+
+    return _attempted_key_save(account_client, key_request)

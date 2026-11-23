@@ -64,6 +64,80 @@ Feature: Files
       And I open the file "atoms.pdf"
       Then I get a PDF
 
+  Rule: A file kept without an extension or missing from disk still behaves
+
+    Scenario: A file without an extension is kept under its name
+      Given I upload the file "README" into home
+      Then home contains the file "README"
+
+    Scenario: A file gone from disk is listed without a size
+      Given I upload the PDF "cells.pdf" saying "Cells divide" into home
+      And "cells.pdf" is gone from storage
+      When I open home
+      Then the file "cells.pdf" is listed without a size
+
+    Scenario: Deleting a file already gone from disk still removes it
+      Given I upload the PDF "cells.pdf" saying "Cells divide" into home
+      And "cells.pdf" is gone from storage
+      When I delete the file "cells.pdf"
+      Then the file "cells.pdf" does not exist
+
+    Scenario: Opening a file gone from disk is refused
+      Given I upload the PDF "cells.pdf" saying "Cells divide" into home
+      And "cells.pdf" is gone from storage
+      When I open the file "cells.pdf"
+      Then I am told "File not found"
+
+  Rule: An upload that fails keeps nothing
+
+    Scenario: A failed upload leaves nothing on disk
+      Given storage fails while saving the second file
+      When I try to upload the PDFs "cells.pdf" and "atoms.pdf" into home
+      Then nothing is left on disk
+      And home contains no files
+
+    Scenario: A failed upload with an overlong file name leaves nothing on disk
+      Given storage fails while saving the second file
+      When I try to upload the PDF "cells.pdf" and a file with a 300-letter extension into home
+      Then nothing is left on disk
+      And home contains no files
+
+  Rule: A file's bookmark tells how many pages it has
+
+    Scenario: A PDF's pages are counted
+      Given I upload the 3-page PDF "cells.pdf" into home
+      When I open the bookmark of "cells.pdf"
+      Then it counts 3 pages
+
+    Scenario: A Word document's pages are counted after converting it
+      Given LibreOffice converts files to PDF
+      And I upload the file "cells.docx" into home
+      When I open the bookmark of "cells.docx"
+      Then it counts 1 page
+
+    Scenario: An unreadable PDF cannot be counted
+      Given I upload the file "broken.pdf" into home
+      When I open the bookmark of "broken.pdf"
+      Then I am told "The PDF cannot be read"
+
+    Scenario: A file gone from disk cannot be counted
+      Given I upload the 3-page PDF "cells.pdf" into home
+      And "cells.pdf" is gone from storage
+      When I open the bookmark of "cells.pdf"
+      Then I am told "File not found"
+
+    Scenario: A Word document LibreOffice cannot convert says why
+      Given LibreOffice fails saying "The document is damaged"
+      And I upload the file "cells.docx" into home
+      When I open the bookmark of "cells.docx"
+      Then I am told "Conversion failed: The document is damaged"
+
+    Scenario: LibreOffice that writes no PDF is reported
+      Given LibreOffice finishes without writing a PDF
+      And I upload the file "cells.docx" into home
+      When I open the bookmark of "cells.docx"
+      Then I am told "Conversion failed: LibreOffice produced no PDF"
+
   Rule: A file remembers the page I stopped on
 
     Scenario: A bookmarked PDF reopens on its page

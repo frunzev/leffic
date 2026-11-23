@@ -38,6 +38,11 @@ Feature: Ask
       When I ask "What is a cell?"
       Then I am told "OpenAI is not set up. Add an OpenAI API key in Settings, or choose Claude Code there."
 
+    Scenario: OpenAI that cannot be reached is explained
+      Given OpenAI is chosen but cannot be reached
+      When I ask "What is a cell?"
+      Then I am told "The assistant is unavailable right now. Try again."
+
   Rule: Choosing another AI engine keeps me where I am
 
     @ui
@@ -93,6 +98,15 @@ Feature: Ask
       And Claude Code looks at my folders
       When I ask "Which folders do I have?"
       Then the answer does not mention "Secret"
+
+    Scenario: Ask sees the decks and notes inside my folders
+      Given I have the folder "Biology" in home
+      And I have the deck "Cells" in "Biology" with the card "What is a cell?"
+      And I have the note "Mitosis" in "Biology"
+      And Claude Code looks at my folders
+      When I ask "Which folders do I have?"
+      Then the answer mentions "Cells"
+      And the answer mentions "Mitosis"
 
   Rule: Ask can read one of my notes
 

@@ -28,11 +28,12 @@ import {
 
 export type GatewayWorld = {
   answers: unknown[][];
+  errors: unknown[][];
 };
 
 type StepAction = (world: GatewayWorld, values: readonly string[]) => void;
 
-type StepDefinition = {
+export type GatewayStepDefinition = {
   readonly keyword: string;
   readonly pattern: RegExp;
   readonly action: StepAction;
@@ -51,6 +52,14 @@ const GUARD_NAMES: Readonly<Record<string, string>> = {
 
 function signedRequest(claims: Record<string, unknown>, secret?: string) {
   return requestWith(bearerAuthorization(signedWith(claims, secret)));
+}
+
+function publicUploadDeclaring(megabytes: number): FakeRequest {
+  const request = requestUsing(POST_METHOD);
+
+  request.headersIn["Content-Length"] = String(megabytes * BYTES_PER_MEGABYTE);
+
+  return request;
 }
 
 function guardedAnswers(routeKind: string, request: FakeRequest) {
@@ -87,7 +96,15 @@ function checkAnswer(world: GatewayWorld, values: readonly string[]): void {
   expect(world.answers).toEqual([[Number(values[0])]]);
 }
 
-export const gatewayStepDefinitions: readonly StepDefinition[] = [
+export const gatewayStepDefinitions: readonly GatewayStepDefinition[] = [
+  {
+    keyword: "When",
+    pattern: /^a sign-up declaring (\d+) MB reaches the gateway$/,
+    action: (world, values) => {
+      const request = publicUploadDeclaring(Number(values[0]));
+      world.answers = publicGuardAnswers(request);
+    },
+  },
   {
     keyword: "When",
     pattern: /^a content request reaches the gateway without a sign-in$/,

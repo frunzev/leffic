@@ -126,7 +126,7 @@ def test_text_from_link_property_never_answers_with_none(
 
     with (
         mock.patch.object(
-            link_text, "get_youtube_transcript_auto", return_value=None
+            link_text, "transcript_of_video", return_value=None
         ),
         mock.patch.object(
             link_text,

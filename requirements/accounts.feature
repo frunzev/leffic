@@ -32,6 +32,42 @@ Feature: Accounts
       When I log in as "nobody@example.com" with my password
       Then I am told "Incorrect email"
 
+    @accounts
+    Scenario: An overlong password is refused like a wrong one
+      Given someone signed up as "learner" with "learner@example.com"
+      When I log in as "learner@example.com" with a 5000-character password
+      Then I am told "Incorrect password"
+
+  Rule: My accounts are kept in the account database
+
+    @accounts
+    Scenario: A new account is stored in the account database
+      Given the account service uses its own database
+      When I sign up as "learner" with "learner@example.com"
+      Then the account database holds the account "learner"
+
+    @accounts
+    Scenario: A stored account logs in again later
+      Given the account service uses its own database
+      And I signed up as "learner" with "learner@example.com"
+      When I log out
+      And I log in as "learner@example.com" with my password
+      Then I am signed in as "learner"
+
+  Rule: A password with a NUL character is never stored
+
+    @accounts
+    Scenario: Signing up with a NUL character is refused
+      When I sign up as "learner" with "learner@example.com" using a password with a NUL character
+      Then the request is refused as invalid
+
+    @accounts
+    Scenario: Changing to a password with a NUL character is refused
+      Given I signed up as "learner" with "learner@example.com"
+      When I change my password to one with a NUL character
+      Then the request is refused as invalid
+      And logging in as "learner@example.com" with my password works
+
   Rule: A session renews itself until I log out
 
     @accounts
@@ -46,6 +82,20 @@ Feature: Accounts
       When I log out
       And I renew my session
       Then I am told "Missing refresh token"
+
+    @accounts
+    Scenario: A forged session is not renewed
+      Given I signed up as "learner" with "learner@example.com"
+      And my session cookie is forged
+      When I renew my session
+      Then I am told "Invalid token"
+
+    @accounts
+    Scenario: A session that names no user is not renewed
+      Given I signed up as "learner" with "learner@example.com"
+      And my session cookie names no user
+      When I renew my session
+      Then I am told "Invalid token"
 
   Rule: Deleting my account needs my password and removes everything I own
 
@@ -68,6 +118,37 @@ Feature: Accounts
       When I delete my account
       Then my deletion is announced
 
+    @accounts
+    Scenario: My saved keys are removed with my account
+      Given the account service uses its own database
+      And I signed up as "learner" with "learner@example.com"
+      And I saved the OpenAI key "sk-live-000000000000000007Xa2"
+      When I delete my account
+      Then the account database holds no saved keys
+
+    @accounts
+    Scenario: A sign-in kept from a deleted account finds nothing
+      Given I signed up as "learner" with "learner@example.com"
+      And I kept my sign-in
+      When I delete my account
+      And I open my account with the sign-in I kept
+      Then I am told "Account does not exist!"
+
+    @accounts
+    Scenario: An account stays when the event broker is unreachable
+      Given I signed up as "learner" with "learner@example.com"
+      And the event broker is unreachable
+      When I try to delete my account
+      Then I am told "Deletion is unavailable right now. Try again."
+      And logging in as "learner@example.com" with my password works
+
+    @accounts
+    Scenario: An account stays when the event broker drops the announcement
+      Given I signed up as "learner" with "learner@example.com"
+      And the event broker drops every message
+      When I try to delete my account
+      Then I am told "Deletion is unavailable right now. Try again."
+      And logging in as "learner@example.com" with my password works
 
     Scenario: My folders and their content are removed
       Given I have the folder "Biology" in home
@@ -85,6 +166,44 @@ Feature: Accounts
       Given another user has the folder "Secret"
       When my account is deleted
       Then another user still has the folder "Secret"
+
+    Scenario: The content service listens for account deletions on its own queue
+      When the content service starts listening for account deletions
+      Then it listens on the durable queue "content.user-deleted" for "user.deleted" messages
+
+    Scenario: A handled account deletion message is acknowledged
+      Given I have the folder "Biology" in home
+      When the account deletion message for me arrives
+      Then the folder "Biology" does not exist
+      And the message is acknowledged
+
+    Scenario: An unreadable account deletion message removes nothing
+      Given I have the folder "Biology" in home
+      When an unreadable account deletion message arrives
+      Then the message is acknowledged
+      And home contains the folder "Biology"
+
+    Scenario: An account deletion that cannot be handled is left for a retry
+      Given I have the folder "Biology" in home
+      When the account deletion message for me arrives but removing content breaks
+      Then the message is not acknowledged
+
+  Rule: OpenAI spending is priced from the tokens each answer used
+
+    Scenario: An answer is priced at the model's published rates
+      Given OpenAI writes the note "Cell notes" saying "Cells divide." using 1000000 input tokens, 0 of them cached, and 100000 output tokens
+      When I import "Cells are the unit of life." into home and only a note is generated
+      Then 45 cents of OpenAI spending were recorded for me
+
+    Scenario: Cached input tokens are priced only at the cached rate
+      Given OpenAI writes the note "Cell notes" saying "Cells divide." using 1000000 input tokens, 1000000 of them cached, and 0 output tokens
+      When I import "Cells are the unit of life." into home and only a note is generated
+      Then 3 cents of OpenAI spending were recorded for me
+
+    Scenario: An answer from a model without known rates records nothing
+      Given OpenAI writes the note "Cell notes" saying "Cells divide." using 1000 input tokens, 0 of them cached, and 1000 output tokens
+      When I import "Cells are the unit of life." into home with the model "gpt-experimental" and only a note is generated
+      Then no OpenAI spending was recorded for me
 
   Rule: A username or an email belongs to one account only
 
@@ -179,6 +298,20 @@ Feature: Accounts
       When I open Settings in the app
       Then the app shows the OpenAI key "sk-live-000000000000000007Xa2" only masked
 
+  Rule: Only a key for a supported provider is saved
+
+    @accounts
+    Scenario: A key for an unknown provider is refused
+      Given I signed up as "learner" with "learner@example.com"
+      When I save a key for the provider "mystery-ai"
+      Then I am told "That AI provider is not supported."
+
+    @accounts
+    Scenario: A blank key is refused
+      Given I signed up as "learner" with "learner@example.com"
+      When I save a blank OpenAI key
+      Then I am told "The key cannot be blank."
+
   Rule: A saved key opens only with my password
 
     @accounts
@@ -194,6 +327,12 @@ Feature: Accounts
       And I saved the OpenAI key "sk-live-000000000000000007Xa2"
       When I open my OpenAI key with a wrong password
       Then I am told "That password is not right."
+
+    @accounts
+    Scenario: Opening a key I never saved is refused
+      Given I signed up as "learner" with "learner@example.com"
+      When I open my Gemini key with my password
+      Then I am told "No key is saved for that provider."
 
   Rule: A key saved before a password change asks to be saved again
 

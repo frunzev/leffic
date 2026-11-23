@@ -10,7 +10,7 @@ from youtube_transcript_api import (
 
 _YOUTUBE_HOSTS = ("www.youtube.com", "youtube.com")
 _SHORT_YOUTUBE_HOST = "youtu.be"
-_DEFAULT_LANGUAGES = ("en",)
+PREFERRED_TRANSCRIPT_LANGUAGES = ("en",)
 
 
 def extract_video_id(url: str) -> str | None:
@@ -22,7 +22,9 @@ def extract_video_id(url: str) -> str | None:
         return query.get("v", [None])[0]
 
     if parsed_url.hostname == _SHORT_YOUTUBE_HOST:
-        return parsed_url.path.lstrip("/")
+        short_link_video_id = parsed_url.path.lstrip("/")
+
+        return short_link_video_id or None
 
     return None
 
@@ -48,23 +50,16 @@ def _preferred_transcript(
 
 
 def _any_transcript(transcript_list: TranscriptList) -> Transcript | None:
-    # Fallback: any manually created transcript
     for transcript in transcript_list:
         if not transcript.is_generated:
             return transcript
 
-    # Fallback: any auto-generated transcript
     return next(iter(transcript_list), None)
 
 
-def get_youtube_transcript_auto(
-    link: str, preferred_langs: tuple[str, ...] = _DEFAULT_LANGUAGES
+def transcript_of_video(
+    video_id: str, preferred_langs: tuple[str, ...]
 ) -> str | None:
-    video_id = extract_video_id(link)
-
-    if not video_id:
-        return None
-
     try:
         transcript_list = YouTubeTranscriptApi().list(video_id)
     except (TranscriptsDisabled, NoTranscriptFound):

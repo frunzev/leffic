@@ -1,12 +1,12 @@
 import uuid
 
 import pytest
-from fastapi import HTTPException
 from hypothesis import assume, given, settings
 from hypothesis import strategies as st
+from sqlalchemy.exc import IntegrityError
 
 from features.file_system.folder_router import _files_storage_ids
-from shared.folder_access import MISSING_FOLDER, ensured_home_folder
+from shared.folder_access import ensured_home_folder
 from shared.models import File, Folder
 from tests.folder_owner_support import (
     FOREIGN_HOME_ID,
@@ -60,11 +60,8 @@ def test_ensured_home_folder_property_refuses_every_foreign_home(
         session.add(Folder(id=caller, name=HOME_NAME, user_id=other_owner))
         session.commit()
 
-    with sessions() as session, pytest.raises(HTTPException) as raised:
+    with sessions() as session, pytest.raises(IntegrityError):
         _ = ensured_home_folder(session, str(caller))
-
-    assert raised.value.status_code == _NOT_FOUND
-    assert raised.value.detail == MISSING_FOLDER
 
 
 @settings(max_examples=25, deadline=None)

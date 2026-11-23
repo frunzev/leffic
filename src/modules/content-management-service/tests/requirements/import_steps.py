@@ -9,6 +9,7 @@ from tests.requirements.requirement_listing import (
     DECK_ENTRY,
     HOME,
     TEST_ENTRY,
+    entries_of_type,
     entry_names,
 )
 from tests.requirements.requirement_lookup import (
@@ -30,6 +31,8 @@ ALL_STUDY_UNITS = ("flashcards", "note", "test")
 _GENERATE_STUDY_UNITS = "/generate-study-units"
 _QUEUED_TASK_ID = "queued-generation"
 _BLANK_TEXT = "   "
+_LINK_TEXT = "Cells are the unit of life."
+_LINK_SOURCE = "link"
 _STUDY_UNIT_WORDING = {
     "flashcards": "flashcards",
     "a note": "note",
@@ -40,12 +43,9 @@ _IMPORT_INTO_FOLDER_STEP = (
 )
 
 
-def requested_import(
-    client: TestClient,
-    folder_id: str,
-    text: str,
-    study_units: tuple[str, ...],
-) -> Response:
+def import_request_body(
+    folder_id: str, text: str, study_units: tuple[str, ...]
+) -> dict[str, object]:
     import_request: dict[str, object] = {
         "text": text,
         "folder_id": folder_id,
@@ -53,6 +53,17 @@ def requested_import(
 
     for study_unit in study_units:
         import_request[study_unit] = {}
+
+    return import_request
+
+
+def requested_import(
+    client: TestClient,
+    folder_id: str,
+    text: str,
+    study_units: tuple[str, ...],
+) -> Response:
+    import_request = import_request_body(folder_id, text, study_units)
 
     return client.post(
         _GENERATE_STUDY_UNITS, json=import_request, headers=authorization()
@@ -77,6 +88,11 @@ class QueuingImporter:
         self, folder_id: str, text: str, study_units: tuple[str, ...]
     ) -> Response:
         return requested_import(self._client, folder_id, text, study_units)
+
+    def imported_request(self, import_request: dict[str, object]) -> Response:
+        return self._client.post(
+            _GENERATE_STUDY_UNITS, json=import_request, headers=authorization()
+        )
 
 
 @pytest.fixture
@@ -192,3 +208,41 @@ def check_only_note_queued(reply: Response) -> None:
     assert queued["note_task_id"]
     assert "flashcard_task_ids" not in queued
     assert "test_task_ids" not in queued
+
+
+@when(
+    parsers.parse(
+        'I import the text of the link "{link}" into home asking for flashcards'
+    )
+)
+def import_link_text(queuing_importer: QueuingImporter, link: str) -> None:
+    import_request = import_request_body(HOME, _LINK_TEXT, ("flashcards",))
+    import_request["source_kind"] = _LINK_SOURCE
+    import_request["source_reference"] = link
+    reply = queuing_importer.imported_request(import_request)
+    _ = reply.raise_for_status()
+
+
+def _deck_sources(client: TestClient) -> list[tuple[object, object]]:
+    deck_sources: list[tuple[object, object]] = []
+
+    for deck_entry in entries_of_type(client, HOME, DECK_ENTRY):
+        deck_source = (
+            deck_entry.get("source_kind"),
+            deck_entry.get("source_reference"),
+        )
+        deck_sources.append(deck_source)
+
+    return deck_sources
+
+
+@then(parsers.parse('home lists a deck from the link "{link}"'))
+def check_deck_from_link(client: TestClient, link: str) -> None:
+    assert (_LINK_SOURCE, link) in _deck_sources(client)
+
+
+@then(parsers.parse('home lists the deck "{deck_name}" without a source'))
+def check_deck_without_source(client: TestClient, deck_name: str) -> None:
+    for deck_entry in entries_of_type(client, HOME, DECK_ENTRY):
+        if deck_entry["name"] == deck_name:
+            assert "source_kind" not in deck_entry

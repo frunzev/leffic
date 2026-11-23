@@ -38,9 +38,10 @@ class RequestCost:
             return None
 
         cached_tokens = usage.input_tokens_details.cached_tokens
+        uncached_tokens = usage.input_tokens - cached_tokens
 
         return (
-            usage.input_tokens * self.rates.input_token_cost
+            uncached_tokens * self.rates.input_token_cost
             + usage.output_tokens * self.rates.output_token_cost
             + cached_tokens * self.rates.cached_token_cost
         )

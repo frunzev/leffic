@@ -10,7 +10,7 @@ from hypothesis import strategies as st
 
 from shared import clock
 from shared.identifiers import parsed_identifier
-from shared.json_extraction import _is_object_dict, get_dict_from_text
+from shared.json_extraction import get_dict_from_text
 
 _NOT_FOUND = 404
 
@@ -45,22 +45,6 @@ def test_get_dict_from_text_property_round_trips_a_json_object(
     surrounded = f"Here you go: {json.dumps(payload)} hope that helps"
 
     assert get_dict_from_text(surrounded) == payload
-
-
-@settings(max_examples=50)
-@given(
-    st.one_of(
-        st.dictionaries(_PLAIN_TEXT, st.integers(), max_size=3),
-        st.lists(st.integers(), max_size=3),
-        st.integers(),
-        st.text(max_size=5),
-        st.none(),
-    )
-)
-def test__is_object_dict_property_admits_exactly_the_mappings(
-    value: object,
-) -> None:
-    assert _is_object_dict(value) is isinstance(value, dict)
 
 
 @settings(max_examples=50)

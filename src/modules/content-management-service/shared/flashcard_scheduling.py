@@ -3,7 +3,6 @@ from datetime import UTC, datetime
 from fsrs import Card, Rating, Scheduler
 from fsrs.card import CardDict
 from fsrs.review_log import ReviewLogDict
-from fsrs.scheduler import SchedulerDict
 
 RATING_MAP: dict[int, Rating] = {
     1: Rating.Again,
@@ -17,24 +16,19 @@ _UNREADABLE_CARD = "That card cannot be read."
 
 
 def schedule_flashcard_fsrs(
-    card: CardDict | None,
-    scheduler: SchedulerDict | None,
-    rating: int,
+    card: CardDict | None, rating: int
 ) -> tuple[CardDict, ReviewLogDict]:
-    new_card, review_log = _restored_scheduler(scheduler).review_card(
+    new_card, review_log = Scheduler().review_card(
         _restored_card(card), RATING_MAP[rating]
     )
 
     return new_card.to_dict(), review_log.to_dict()
 
 
-def get_ratings_times(
-    card: CardDict | None,
-    scheduler: SchedulerDict | None,
-) -> dict[int, int]:
+def get_ratings_times(card: CardDict | None) -> dict[int, int]:
     timestamp = datetime.now(UTC)
     restored_card = _restored_card(card)
-    preview_scheduler = _preview_scheduler(scheduler)
+    preview_scheduler = _preview_scheduler()
     ratings_times: dict[int, int] = {}
 
     for rating_value, rating in RATING_MAP.items():
@@ -62,18 +56,5 @@ def _restored_card(card: CardDict | None) -> Card:
         raise UnreadableCardError from unreadable
 
 
-def _restored_scheduler(scheduler: SchedulerDict | None) -> Scheduler:
-    if not scheduler:
-        return Scheduler()
-
-    return Scheduler.from_dict(scheduler)
-
-
-def _preview_scheduler(scheduler: SchedulerDict | None) -> Scheduler:
-    scheduler_settings = _restored_scheduler(scheduler).to_dict()
-    unfuzzed_settings: SchedulerDict = {
-        **scheduler_settings,
-        "enable_fuzzing": False,
-    }
-
-    return Scheduler.from_dict(unfuzzed_settings)
+def _preview_scheduler() -> Scheduler:
+    return Scheduler(enable_fuzzing=False)

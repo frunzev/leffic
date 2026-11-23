@@ -1,13 +1,8 @@
-from typing import cast
-from unittest import mock
-
-import pytest
 from fastapi.testclient import TestClient
 from httpx import Response
 from pytest_bdd import given, parsers, then, when
 
-from features.account import account_router
-from features.account.events import USER_DELETED
+from tests.broker_fakes import FakeChannel
 from tests.requirements.session_steps import (
     NEW_PHRASE,
     SIGN_UP_PHRASE,
@@ -83,36 +78,23 @@ def change_password_wrongly(account_client: TestClient) -> Response:
     return _changed_phrase(account_client, WRONG_PHRASE, NEW_PHRASE)
 
 
-@when("I delete my account", target_fixture="deletion_announcements")
+@when("I delete my account")
 def delete_account(
-    account_client: TestClient, monkeypatch: pytest.MonkeyPatch
-) -> mock.Mock:
-    announcements = mock.Mock()
-    monkeypatch.setattr(account_router, "publish", announcements)
+    account_client: TestClient, event_broker: FakeChannel
+) -> None:
+    _ = event_broker
     reply = _deleted_account(account_client, SIGN_UP_PHRASE)
     _ = reply.raise_for_status()
 
-    return announcements
+
+@when("I try to delete my account", target_fixture="reply")
+def try_to_delete_account(account_client: TestClient) -> Response:
+    return _deleted_account(account_client, SIGN_UP_PHRASE)
 
 
 @when("I delete my account with a wrong password", target_fixture="reply")
-def delete_account_wrongly(
-    account_client: TestClient, monkeypatch: pytest.MonkeyPatch
-) -> Response:
-    monkeypatch.setattr(account_router, "publish", mock.Mock())
-
+def delete_account_wrongly(account_client: TestClient) -> Response:
     return _deleted_account(account_client, WRONG_PHRASE)
-
-
-@then("my deletion is announced")
-def check_deletion_announced(deletion_announcements: mock.Mock) -> None:
-    announced_arguments = cast(
-        "tuple[str, dict[str, str]]", deletion_announcements.call_args.args
-    )
-    announced_event, announced_payload = announced_arguments
-
-    assert announced_event == USER_DELETED
-    assert announced_payload["user_id"]
 
 
 @when(parsers.parse('I choose the "{theme}" theme'), target_fixture="reply")

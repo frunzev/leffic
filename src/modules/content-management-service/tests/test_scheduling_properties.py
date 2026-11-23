@@ -1,8 +1,6 @@
 from datetime import UTC, datetime
-from typing import cast
 
 from fsrs import Card, Scheduler
-from fsrs.scheduler import SchedulerDict
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
@@ -10,7 +8,6 @@ from shared.flashcard_scheduling import (
     RATING_MAP,
     _preview_scheduler,
     _restored_card,
-    _restored_scheduler,
     get_ratings_times,
     schedule_flashcard_fsrs,
 )
@@ -40,27 +37,21 @@ def test__restored_card_property_round_trips_a_serialised_card(
 
 
 @settings(max_examples=25)
-@given(st.sampled_from(cast("list[SchedulerDict | None]", [None, {}])))
-def test__restored_scheduler_property_ignores_an_empty_scheduler(
-    scheduler: SchedulerDict | None,
+@given(_REVIEW_HISTORIES, _RATINGS)
+def test__preview_scheduler_property_previews_one_review_identically(
+    ratings: list[int], rating: int
 ) -> None:
-    restored = _restored_scheduler(scheduler)
+    card = _reviewed_card(ratings)
+    reviewed_at = datetime.now(UTC)
 
-    assert restored.to_dict() == Scheduler().to_dict()
+    first, _ = _preview_scheduler().review_card(
+        card, RATING_MAP[rating], review_datetime=reviewed_at
+    )
+    second, _ = _preview_scheduler().review_card(
+        card, RATING_MAP[rating], review_datetime=reviewed_at
+    )
 
-
-@settings(max_examples=25)
-@given(st.booleans(), st.floats(min_value=0.7, max_value=0.99))
-def test__preview_scheduler_property_never_fuzzes_and_keeps_retention(
-    is_fuzzing: bool, desired_retention: float
-) -> None:
-    written_scheduler = Scheduler(
-        desired_retention=desired_retention, enable_fuzzing=is_fuzzing
-    ).to_dict()
-    preview = _preview_scheduler(written_scheduler)
-
-    assert preview.enable_fuzzing is False
-    assert preview.desired_retention == desired_retention
+    assert first.due == second.due
 
 
 @settings(max_examples=25, deadline=None)
@@ -70,7 +61,7 @@ def test_schedule_flashcard_fsrs_property_never_schedules_into_the_past(
 ) -> None:
     reviewed_at = datetime.now(UTC)
     card, _ = schedule_flashcard_fsrs(
-        _reviewed_card(ratings).to_dict(), None, rating
+        _reviewed_card(ratings).to_dict(), rating
     )
 
     assert Card.from_dict(card).due >= reviewed_at
@@ -81,7 +72,7 @@ def test_schedule_flashcard_fsrs_property_never_schedules_into_the_past(
 def test_get_ratings_times_property_never_returns_a_negative_wait(
     ratings: list[int],
 ) -> None:
-    times = get_ratings_times(_reviewed_card(ratings).to_dict(), None)
+    times = get_ratings_times(_reviewed_card(ratings).to_dict())
 
     assert sorted(times) == [1, 2, 3, 4]
     assert all(seconds >= 0 for seconds in times.values())
@@ -92,7 +83,7 @@ def test_get_ratings_times_property_never_returns_a_negative_wait(
 def test_get_ratings_times_property_never_brings_a_harder_rating_back_later(
     ratings: list[int],
 ) -> None:
-    times = get_ratings_times(_reviewed_card(ratings).to_dict(), None)
+    times = get_ratings_times(_reviewed_card(ratings).to_dict())
     waits_from_hardest_to_easiest = [times[1], times[2], times[3], times[4]]
 
     assert waits_from_hardest_to_easiest == sorted(

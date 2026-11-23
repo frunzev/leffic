@@ -66,7 +66,7 @@ def owned_folder(
 
 def ensured_home_folder(db: Session, user_id: str) -> Folder:
     owner = uuid.UUID(user_id)
-    home = db.query(Folder).filter_by(id=owner).first()
+    home = db.query(Folder).filter_by(id=owner, user_id=owner).first()
 
     if home is None:
         created = Folder(id=owner, name=_HOME_FOLDER_NAME, user_id=owner)
@@ -74,10 +74,5 @@ def ensured_home_folder(db: Session, user_id: str) -> Folder:
         db.commit()
 
         return created
-
-    if home.user_id != owner:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=MISSING_FOLDER
-        )
 
     return home

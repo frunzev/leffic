@@ -18,7 +18,7 @@ from features.study_units_generation.youtube_transcript import (
     _joined_transcript,
     _preferred_transcript,
     extract_video_id,
-    get_youtube_transcript_auto,
+    transcript_of_video,
 )
 from tests.test_link_extractor import FakeTranscript, FakeTranscriptList
 
@@ -30,6 +30,9 @@ _REQUESTS_GET = (
     "features.study_units_generation.webpage_extractor.requests.get"
 )
 _LANGUAGES = ("en",)
+_TRANSCRIPT_API_LIST = (
+    "features.study_units_generation.youtube_transcript.YouTubeTranscriptApi.list"
+)
 _VIDEO_IDS = st.text(
     alphabet=st.characters(min_codepoint=97, max_codepoint=122),
     min_size=5,
@@ -44,9 +47,6 @@ _SNIPPETS = st.lists(
     min_size=1,
     max_size=5,
 )
-_OTHER_HOSTS = st.sampled_from(
-    ["https://example.com/watch?v=abc", "https://vimeo.com/12345", "notaurl"]
-)
 
 
 @settings(max_examples=50, deadline=None)
@@ -59,14 +59,6 @@ def test_extract_video_id_property_reads_the_id_from_either_youtube_form(
 
     assert extract_video_id(watch_url) == video_id
     assert extract_video_id(short_url) == video_id
-
-
-@settings(max_examples=25, deadline=None)
-@given(_OTHER_HOSTS)
-def test_get_youtube_transcript_auto_property_ignores_other_hosts(
-    url: str,
-) -> None:
-    assert get_youtube_transcript_auto(url) is None
 
 
 @settings(max_examples=50, deadline=None)
@@ -179,3 +171,18 @@ def test_extract_link_main_content_property_stays_quiet_when_it_cannot_fetch(
         _REQUESTS_GET, side_effect=requests.RequestException("offline")
     ):
         assert extract_link_main_content(url) is None
+
+
+@settings(max_examples=25, deadline=None)
+@given(_VIDEO_IDS, _SNIPPETS)
+def test_transcript_of_video_property_joins_the_whole_manual_transcript(
+    video_id: str, snippets: list[str]
+) -> None:
+    manual = FakeTranscript(snippets[0], is_generated=False)
+    manual.extra_snippets = snippets[1:]
+    listing = FakeTranscriptList([], manual_found=manual)
+
+    with mock.patch(_TRANSCRIPT_API_LIST, return_value=listing):
+        transcript = transcript_of_video(video_id, _LANGUAGES)
+
+    assert transcript == " ".join(snippets)

@@ -4,7 +4,6 @@ from hypothesis import strategies as st
 
 from features.study_units_generation.study_unit_types import (
     DEFAULT_FLASHCARD_TYPES,
-    UnknownStudyUnitTypeError,
     requested_names,
     study_unit_type,
 )
@@ -41,10 +40,8 @@ def test_study_unit_type_property_refuses_a_type_it_does_not_know(
     if name in _KNOWN:
         return
 
-    with pytest.raises(UnknownStudyUnitTypeError) as refused:
+    with pytest.raises(KeyError):
         _ = study_unit_type(name)
-
-    assert str(refused.value) == f"No study unit type named {name}"
 
 
 @settings(max_examples=50)

@@ -6,8 +6,9 @@ from unittest import mock
 from youtube_transcript_api import NoTranscriptFound, TranscriptsDisabled
 
 from features.study_units_generation.youtube_transcript import (
+    PREFERRED_TRANSCRIPT_LANGUAGES,
     extract_video_id,
-    get_youtube_transcript_auto,
+    transcript_of_video,
 )
 from tests.support import FakeHTTPError
 
@@ -111,9 +112,7 @@ def test_prefers_a_manually_created_transcript() -> None:
     listing = FakeTranscriptList([], manual_found=manual)
 
     with _patch_transcripts(listing):
-        transcript = get_youtube_transcript_auto(
-            f"https://youtu.be/{_VIDEO_ID}"
-        )
+        transcript = transcript_of_video(_VIDEO_ID, PREFERRED_TRANSCRIPT_LANGUAGES)
 
     assert transcript == "manual words"
 
@@ -123,9 +122,7 @@ def test_falls_back_to_a_generated_transcript() -> None:
     listing = FakeTranscriptList([], generated_found=generated)
 
     with _patch_transcripts(listing):
-        transcript = get_youtube_transcript_auto(
-            f"https://youtu.be/{_VIDEO_ID}"
-        )
+        transcript = transcript_of_video(_VIDEO_ID, PREFERRED_TRANSCRIPT_LANGUAGES)
 
     assert transcript == "generated words"
 
@@ -135,9 +132,7 @@ def test_falls_back_to_any_manual_transcript() -> None:
     listing = FakeTranscriptList([any_manual])
 
     with _patch_transcripts(listing):
-        transcript = get_youtube_transcript_auto(
-            f"https://youtu.be/{_VIDEO_ID}"
-        )
+        transcript = transcript_of_video(_VIDEO_ID, PREFERRED_TRANSCRIPT_LANGUAGES)
 
     assert transcript == "any manual"
 
@@ -147,9 +142,7 @@ def test_falls_back_to_any_generated_transcript() -> None:
     listing = FakeTranscriptList([any_generated])
 
     with _patch_transcripts(listing):
-        transcript = get_youtube_transcript_auto(
-            f"https://youtu.be/{_VIDEO_ID}"
-        )
+        transcript = transcript_of_video(_VIDEO_ID, PREFERRED_TRANSCRIPT_LANGUAGES)
 
     assert transcript == "any generated"
 
@@ -158,9 +151,7 @@ def test_returns_nothing_when_no_transcript_exists() -> None:
     listing = FakeTranscriptList([])
 
     with _patch_transcripts(listing):
-        transcript = get_youtube_transcript_auto(
-            f"https://youtu.be/{_VIDEO_ID}"
-        )
+        transcript = transcript_of_video(_VIDEO_ID, PREFERRED_TRANSCRIPT_LANGUAGES)
 
     assert transcript is None
 
@@ -170,9 +161,7 @@ def test_returns_nothing_when_transcripts_are_disabled() -> None:
         _TRANSCRIPT_API_LIST,
         side_effect=TranscriptsDisabled(_VIDEO_ID),
     ):
-        transcript = get_youtube_transcript_auto(
-            f"https://youtu.be/{_VIDEO_ID}"
-        )
+        transcript = transcript_of_video(_VIDEO_ID, PREFERRED_TRANSCRIPT_LANGUAGES)
 
     assert transcript is None
 
@@ -187,8 +176,6 @@ def test_snippets_are_joined_with_single_spaces() -> None:
     listing = FakeTranscriptList([], manual_found=manual)
 
     with _patch_transcripts(listing):
-        transcript = get_youtube_transcript_auto(
-            f"https://youtu.be/{_VIDEO_ID}"
-        )
+        transcript = transcript_of_video(_VIDEO_ID, PREFERRED_TRANSCRIPT_LANGUAGES)
 
     assert transcript == "one two"

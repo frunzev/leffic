@@ -6,6 +6,8 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from features.file_upload import file_uploader as uploader_module
+from shared.local_disk_file_storage import LocalDiskFileStorage
+from tests.file_storage_fakes import RecordingFileStorage
 from tests.file_upload_support import (
     EXTENSIONS,
     emptied,
@@ -13,8 +15,6 @@ from tests.file_upload_support import (
     numbered_filenames,
     stored_uploads,
 )
-from shared.local_disk_file_storage import LocalDiskFileStorage
-from tests.file_storage_fakes import RecordingFileStorage
 from tests.hostile_identifiers import SINGLE_SEGMENT_IDENTIFIERS
 
 _PROPERTY_STORAGE = Path(tempfile.mkdtemp())

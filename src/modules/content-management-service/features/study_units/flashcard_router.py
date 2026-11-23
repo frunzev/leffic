@@ -108,7 +108,7 @@ def review_flashcard(
 ) -> JSONResponse:
     card = owned_flashcard(db, user_id, request_data.flashcard_id)
     new_card, review_log = schedule_flashcard_fsrs(
-        cast("CardDict | None", card.fsrs_card), None, request_data.rating
+        cast("CardDict | None", card.fsrs_card), request_data.rating
     )
 
     return JSONResponse(

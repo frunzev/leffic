@@ -115,3 +115,9 @@ def seeded_short_answer(
         "answer": answer,
     }
     _seeded_item(sessions, test_id, _SHORT_ANSWER, short_answer_content)
+
+
+def seed_item(
+    sessions: Sessions, test_id: str, item_content: dict[str, object]
+) -> None:
+    _seeded_item(sessions, test_id, _MULTIPLE_CHOICE, item_content)

@@ -9,4 +9,9 @@ pytest_plugins = [
     "tests.requirements.account_settings_steps",
     "tests.requirements.key_steps",
     "tests.requirements.spending_steps",
+    "tests.requirements.sign_in_steps",
+    "tests.requirements.password_steps",
+    "tests.requirements.account_database_steps",
+    "tests.requirements.broker_steps",
+    "tests.requirements.operations_steps",
 ]

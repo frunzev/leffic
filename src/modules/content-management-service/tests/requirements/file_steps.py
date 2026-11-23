@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from httpx import Response
 from pytest_bdd import given, parsers, then, when
 
 from shared.models import File
@@ -50,18 +51,26 @@ class HomeUploader:
         self._sessions: Sessions = sessions
         self._stored_files_directory: Path = stored_files_directory
 
-    def upload(self, uploads: list[Upload]) -> None:
+    def attempted_upload(
+        self, folder_id: str, uploads: list[Upload]
+    ) -> Response:
         multipart_files: list[tuple[str, Upload]] = []
 
         for upload in uploads:
             multipart_files.append((_FILE_FIELD, upload))
 
-        reply = self._client.post(
+        return self._client.post(
             _UPLOAD_FILES,
             files=multipart_files,
-            data={"folder_id": home_folder_id(self._sessions)},
+            data={"folder_id": folder_id},
             headers=authorization(),
         )
+
+    def upload(self, uploads: list[Upload]) -> None:
+        self.upload_into(home_folder_id(self._sessions), uploads)
+
+    def upload_into(self, folder_id: str, uploads: list[Upload]) -> None:
+        reply = self.attempted_upload(folder_id, uploads)
         _ = reply.raise_for_status()
 
         if not any(self._stored_files_directory.iterdir()):

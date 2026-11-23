@@ -2,7 +2,6 @@ import os
 from typing import Protocol
 
 import pika
-from pika.exceptions import AMQPError
 from pydantic import BaseModel, ValidationError
 
 from features.user_events.user_cleanup import remove_everything_owned_by
@@ -61,9 +60,5 @@ def _on_message(
     _properties: object,
     body: bytes,
 ) -> None:
-    try:
-        handle(body)
-    except AMQPError:
-        return
-
+    handle(body)
     channel.basic_ack(delivery_tag=method.delivery_tag)

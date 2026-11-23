@@ -46,6 +46,26 @@ Feature: Flashcards
       Then the backend received the rating 1
       And the app shows "You're done for today"
 
+  Rule: Only my own readable cards can be rated
+
+    Scenario: Asking when an unreadable card comes back is refused
+      When I ask when an unreadable card comes back for each rating
+      Then I am told "That card cannot be read."
+
+    Scenario: Another user cannot rate my card
+      Given I have the deck "Cells" in home with the card "What is a cell?"
+      When another user rates the card "What is a cell?" as "Good"
+      Then they are told "Flashcard does not exist!"
+
+    Scenario: Asking for due cards without a folder is refused
+      When I ask for the cards due without naming a folder
+      Then I am told "Folder does not exist!"
+
+    Scenario: A folder without cards has no review counts
+      Given I have the folder "Biology" in home
+      When I ask how many cards are due in "Biology"
+      Then I am told "No flashcards!"
+
   Rule: Each rating shows when the card comes back
 
     Scenario: A harder rating never brings a new card back later

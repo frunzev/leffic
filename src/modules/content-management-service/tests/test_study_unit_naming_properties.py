@@ -15,7 +15,6 @@ from features.study_units_generation.study_unit_source import (
     StudyUnitSource,
 )
 from features.study_units_generation.task_status_router import (
-    _as_identifier,
     _deck_name,
     _test_name,
 )
@@ -55,24 +54,3 @@ def test__test_name_property_answers_none_for_a_test_that_is_gone(
 
         assert _test_name(session, test_id) == test_name
         assert _test_name(session, str(absent)) is None
-
-
-@settings(max_examples=50)
-@given(st.text(max_size=12))
-def test__as_identifier_property_answers_none_for_what_is_not_a_uuid(
-    row_id: str,
-) -> None:
-    try:
-        expected = uuid.UUID(row_id)
-    except ValueError:
-        expected = None
-
-    assert _as_identifier(row_id) == expected
-
-
-@settings(max_examples=50)
-@given(st.uuids())
-def test__as_identifier_property_round_trips_a_real_uuid(
-    row_id: uuid.UUID,
-) -> None:
-    assert _as_identifier(str(row_id)) == row_id

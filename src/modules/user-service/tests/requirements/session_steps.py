@@ -2,6 +2,7 @@ from collections.abc import Iterator
 from typing import cast
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from httpx import Response
 from pytest_bdd import given, parsers, then, when
@@ -30,7 +31,7 @@ ReplyBody = dict[str, object]
 
 
 @pytest.fixture
-def account_client() -> Iterator[TestClient]:
+def account_app() -> FastAPI:
     engine = create_engine(
         _IN_MEMORY_DATABASE,
         connect_args={"check_same_thread": False},
@@ -42,7 +43,12 @@ def account_client() -> Iterator[TestClient]:
         sessionmaker(bind=engine)
     )
 
-    with TestClient(app, base_url=_SECURE_BASE_URL) as test_client:
+    return app
+
+
+@pytest.fixture
+def account_client(account_app: FastAPI) -> Iterator[TestClient]:
+    with TestClient(account_app, base_url=_SECURE_BASE_URL) as test_client:
         yield test_client
 
 

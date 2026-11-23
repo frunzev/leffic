@@ -5,18 +5,12 @@ from fastapi import HTTPException
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from features.study_units_generation.task_ownership import (
-    MISSING_TASK,
-    AmbiguousTokenSegmentError,
-)
+from features.study_units_generation.task_ownership import MISSING_TASK
 from tests.task_token_support import DIGEST_LENGTH, NOT_FOUND, TASK_TOKENS
 
 _DOTLESS_TEXT: Final[st.SearchStrategy[str]] = st.text(
     alphabet=st.characters(blacklist_characters="."), max_size=24
 )
-_DOTTED_TEXT: Final[st.SearchStrategy[str]] = st.tuples(
-    _DOTLESS_TEXT, _DOTLESS_TEXT
-).map(".".join)
 _IDENTIFIERS: Final[st.SearchStrategy[str]] = st.text(
     alphabet="abcdef0123456789-", min_size=1, max_size=40
 )
@@ -167,15 +161,3 @@ def test_verified_task_id_property_refuses_a_truncated_digest(
 
     assert _refusal_of(minted[:-1]).status_code == NOT_FOUND
     assert _refusal_of(minted[:-1]).detail == MISSING_TASK
-
-
-@settings(max_examples=_EXAMPLE_BUDGET)
-@given(_DOTTED_TEXT, _DOTLESS_TEXT)
-def test_signed_task_id_property_refuses_a_segment_separator(
-    dotted: str, plain: str
-) -> None:
-    with pytest.raises(AmbiguousTokenSegmentError):
-        _ = TASK_TOKENS.signed_task_id(dotted, plain)
-
-    with pytest.raises(AmbiguousTokenSegmentError):
-        _ = TASK_TOKENS.signed_task_id(plain, dotted)

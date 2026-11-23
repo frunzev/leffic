@@ -106,6 +106,43 @@ def read_page_text(
 
 
 @when(
+    parsers.parse(
+        (
+            "I read the text out of pages {first_page:d} to {last_page:d} "
+            'of "{file_name}"'
+        )
+    ),
+    target_fixture="reply",
+)
+def read_page_range_text(
+    client: TestClient,
+    sessions: Sessions,
+    first_page: int,
+    last_page: int,
+    file_name: str,
+) -> Response:
+    file_metadata = {
+        "file_id": stored_file_id(sessions, file_name),
+        "pages": {"first": first_page, "last": last_page},
+    }
+
+    return _extracted(client, {"file_metadata": [file_metadata]})
+
+
+@when("I read the text out of nothing", target_fixture="reply")
+def read_nothing(client: TestClient) -> Response:
+    return _extracted(client, {})
+
+
+@when(
+    parsers.parse('I read the text out of the topic "{topic}"'),
+    target_fixture="reply",
+)
+def read_topic(client: TestClient, topic: str) -> Response:
+    return _extracted(client, {"topic_metadata": topic})
+
+
+@when(
     parsers.parse('I read the text out of the link "{link}"'),
     target_fixture="reply",
 )

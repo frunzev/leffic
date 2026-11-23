@@ -15,8 +15,13 @@ GPT_5_MINI = "gpt-5-mini"
 
 MODEL_RATES: dict[str, ModelRates] = {
     GPT_4_1_NANO: ModelRates(
-        input_token_cost=0.100 / _TOKENS_PER_PRICE_UNIT,
-        output_token_cost=0.025 / _TOKENS_PER_PRICE_UNIT,
-        cached_token_cost=0.400 / _TOKENS_PER_PRICE_UNIT,
+        input_token_cost=0.10 / _TOKENS_PER_PRICE_UNIT,
+        output_token_cost=0.40 / _TOKENS_PER_PRICE_UNIT,
+        cached_token_cost=0.025 / _TOKENS_PER_PRICE_UNIT,
+    ),
+    GPT_5_MINI: ModelRates(
+        input_token_cost=0.25 / _TOKENS_PER_PRICE_UNIT,
+        output_token_cost=2.00 / _TOKENS_PER_PRICE_UNIT,
+        cached_token_cost=0.025 / _TOKENS_PER_PRICE_UNIT,
     ),
 }

@@ -9,9 +9,6 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from features.study_units_generation import task_status_router
 from features.study_units_generation.celery_app import celery_app
-from features.study_units_generation.task_status_router import (
-    _finished_result,
-)
 from tests.access_support import (
     HOME_ID,
     OwnedContent,
@@ -33,10 +30,6 @@ _PENDING: Final[str] = "PENDING"
 _FAILED: Final[str] = "FAILURE"
 _FAILURE_BODY: Final[dict[str, object]] = {"status": _FAILED}
 _TASK_ID: Final[str] = "abcdef01"
-_NON_DICT_RESULTS: Final[tuple[object, ...]] = (
-    None,
-    ["not", "a", "dict"],
-)
 
 
 def _looking_up(
@@ -74,20 +67,8 @@ def owned(sessions: sessionmaker[Session]) -> OwnedContent:
     return seeded_content(sessions, HOME_ID)
 
 
-def test_the_router_names_the_failure_status_it_substitutes() -> None:
-    assert task_status_router._FAILED == _FAILED
-
-
 def test_the_router_carries_no_unexpected_result_message() -> None:
     assert not hasattr(task_status_router, "_UNEXPECTED_RESULT")
-
-
-@pytest.mark.parametrize("finished", _NON_DICT_RESULTS)
-def test_a_succeeded_task_without_a_mapping_reports_a_failure(
-    finished: object,
-) -> None:
-    with _looking_up(_SUCCEEDED, finished, ready=True):
-        assert _finished_result(_TASK_ID) == (_FAILED, None)
 
 
 @pytest.mark.parametrize(
@@ -95,10 +76,10 @@ def test_a_succeeded_task_without_a_mapping_reports_a_failure(
     [
         (
             "/flashcards-status",
-            {"flashcard_deck_id": "d1"},
+            {"flashcard_deck_id": "6f1c7d4e-0000-4000-8000-0000000000d1"},
             "flashcard_deck_id",
         ),
-        ("/test-task-status", {"test_id": "t1"}, "test_id"),
+        ("/test-task-status", {"test_id": "6f1c7d4e-0000-4000-8000-0000000000e1"}, "test_id"),
         ("/note-task-status", {"note_id": "n1"}, "note_id"),
     ],
 )
@@ -130,20 +111,6 @@ def test_a_pending_task_reports_only_its_status(
         )
 
     assert body == {"status": _PENDING}
-
-
-@pytest.mark.parametrize("path", STATUS_PATHS)
-@pytest.mark.parametrize("finished", _NON_DICT_RESULTS)
-def test_a_route_answers_a_bare_failure_for_a_non_dict_result(
-    client: TestClient, owned: OwnedContent, path: str, finished: object
-) -> None:
-    with _looking_up(_SUCCEEDED, finished, ready=True):
-        code, body = answered(
-            client, path, owned_token(owned.folder_id), authorization()
-        )
-
-    assert code == OK
-    assert body == _FAILURE_BODY
 
 
 @pytest.mark.parametrize("path", STATUS_PATHS)

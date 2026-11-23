@@ -11,6 +11,11 @@ _ARTICLE_REPEATS = 30
 _ARTICLE_PAGE = "<html><body><article>{article}</article></body></html>"
 _UNREACHABLE = "The web page cannot be reached"
 _ARTICLE_STEP = 'the web page "{link}" has a long article saying "{sentence}"'
+_BLOCK_PAGE = "<html><body><div>{block}</div></body></html>"
+_SHORT_ARTICLE_PAGE = (
+    "<html><body><article>Short.</article><div>{block}</div></body></html>"
+)
+_LINE_PAGE = "<html><body><p>{line}</p></body></html>"
 
 
 class FakeWebPage:
@@ -86,7 +91,7 @@ def _serve_web(monkeypatch: pytest.MonkeyPatch, pages: dict[str, str]) -> None:
 def serve_article(
     monkeypatch: pytest.MonkeyPatch, link: str, sentence: str
 ) -> None:
-    article = " ".join([sentence] * _ARTICLE_REPEATS)
+    article = _long_text(sentence)
     _serve_web(monkeypatch, {link: _ARTICLE_PAGE.format(article=article)})
 
 
@@ -109,3 +114,53 @@ def serve_transcript(
         "YouTubeTranscriptApi",
         FakeTranscriptApi({video_id: transcript}),
     )
+
+
+def _long_text(sentence: str) -> str:
+    return " ".join([sentence] * _ARTICLE_REPEATS)
+
+
+@given(
+    parsers.parse(
+        (
+            'the web page "{link}" has no article but a long block saying '
+            '"{sentence}"'
+        )
+    )
+)
+def serve_block_page(
+    monkeypatch: pytest.MonkeyPatch, link: str, sentence: str
+) -> None:
+    page = _BLOCK_PAGE.format(block=_long_text(sentence))
+    _serve_web(monkeypatch, {link: page})
+
+
+@given(
+    parsers.parse(
+        (
+            'the web page "{link}" has a short article and a long block saying '
+            '"{sentence}"'
+        )
+    )
+)
+def serve_short_article_page(
+    monkeypatch: pytest.MonkeyPatch, link: str, sentence: str
+) -> None:
+    page = _SHORT_ARTICLE_PAGE.format(block=_long_text(sentence))
+    _serve_web(monkeypatch, {link: page})
+
+
+@given(parsers.parse('the web page "{link}" has only the line "{line}"'))
+def serve_line_page(
+    monkeypatch: pytest.MonkeyPatch, link: str, line: str
+) -> None:
+    _serve_web(monkeypatch, {link: _LINE_PAGE.format(line=line)})
+
+
+@given(
+    parsers.parse('the web page "{link}" has only the short block "{block}"')
+)
+def serve_short_block_page(
+    monkeypatch: pytest.MonkeyPatch, link: str, block: str
+) -> None:
+    _serve_web(monkeypatch, {link: _BLOCK_PAGE.format(block=block)})

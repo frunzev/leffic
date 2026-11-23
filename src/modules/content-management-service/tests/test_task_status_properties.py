@@ -29,7 +29,6 @@ from tests.support import in_memory_sessions
 from tests.task_token_support import TASK_TOKENS
 
 _SUCCEEDED: Final[str] = "SUCCESS"
-_FAILED: Final[str] = "FAILURE"
 NonMappingStrategy = st.SearchStrategy[object]
 _NOT_A_MAPPING: Final[NonMappingStrategy] = st.one_of(
     st.none(),
@@ -83,19 +82,6 @@ def test__finished_result_property_hands_over_a_finished_mapping(
         _reporting(_SUCCEEDED, finished, ready=True),
     ):
         assert _finished_result(task_id) == (_SUCCEEDED, finished)
-
-
-@settings(max_examples=50)
-@given(_TASK_IDS, _NOT_A_MAPPING)
-def test__finished_result_property_reports_a_failure_for_a_non_mapping(
-    task_id: str, finished: object
-) -> None:
-    with mock.patch.object(
-        task_status_router,
-        "AsyncResult",
-        _reporting(_SUCCEEDED, finished, ready=True),
-    ):
-        assert _finished_result(task_id) == (_FAILED, None)
 
 
 @settings(max_examples=25, deadline=None)

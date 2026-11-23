@@ -41,21 +41,8 @@ _BY_NAME = {
     for unit_type in _FLASHCARD_TYPES + _TEST_ITEM_TYPES
 }
 
-_UNKNOWN_TYPE = "No study unit type named"
-
-
-class UnknownStudyUnitTypeError(Exception):
-    def __init__(self, name: str) -> None:
-        super().__init__(f"{_UNKNOWN_TYPE} {name}")
-
-
 def study_unit_type(name: str) -> StudyUnitType:
-    unit_type = _BY_NAME.get(name)
-
-    if unit_type is None:
-        raise UnknownStudyUnitTypeError(name)
-
-    return unit_type
+    return _BY_NAME[name]
 
 
 def requested_names(

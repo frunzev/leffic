@@ -1,12 +1,7 @@
-import demjson3
 import pytest
 from demjson3 import JSONDecodeError
 
 from shared.json_extraction import get_dict_from_text
-
-
-def _decode_to_a_list(text: str) -> object:
-    return [text]
 
 
 def test_extracts_a_plain_object() -> None:
@@ -42,15 +37,6 @@ def test_extracts_an_object_at_the_end() -> None:
 def test_rejects_text_without_any_object() -> None:
     with pytest.raises(JSONDecodeError, match="No value to decode"):
         _ = get_dict_from_text("no object here")
-
-
-def test_rejects_an_answer_that_is_not_an_object(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(demjson3, "decode", _decode_to_a_list)
-
-    with pytest.raises(TypeError, match="did not answer with an object"):
-        _ = get_dict_from_text("{}")
 
 
 def test_newlines_inside_the_object_are_removed() -> None:

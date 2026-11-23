@@ -96,6 +96,12 @@ Feature: Folders
       When I delete the folder "Biology"
       Then the folder "Cells" does not exist
 
+    Scenario: The files of a deleted folder leave the disk
+      Given I have the folder "Biology" in home
+      And I upload the PDF "cells.pdf" saying "Cells divide" into "Biology"
+      When I delete the folder "Biology"
+      Then nothing is left on disk
+
   Rule: Home cannot be deleted
 
     Scenario: Deleting home is refused
@@ -169,3 +175,29 @@ Feature: Folders
       Given I have the test "Mammals" in home
       When I delete the test "Mammals"
       Then the test "Mammals" does not exist
+
+  Rule: A folder is named when it is made or opened
+
+    Scenario: A folder without a parent is refused
+      When I create the folder "Biology" without a parent
+      Then I am told "Missing parent folder"
+
+    Scenario: Opening a folder without naming it is refused
+      When I open a folder without naming it
+      Then I am told "Missing folder id"
+
+    Scenario: Opening a folder with a malformed id is refused
+      When I open the folder with the id "not-a-folder-id"
+      Then I am told "Folder does not exist!"
+
+  Rule: Only decks, tests, notes, files and folders can be renamed
+
+    Scenario: Renaming a unit of an unknown kind is refused
+      Given I have the deck "Cells" in home with the card "What is a cell?"
+      When I rename the deck "Cells" as a "poster" to "Posters"
+      Then I am told "Unknown unit type!"
+
+    Scenario: Renaming a deck as a deck works
+      Given I have the deck "Cells" in home with the card "What is a cell?"
+      When I rename the deck "Cells" as a "flashcard_deck" to "Cell cards"
+      Then home contains the deck "Cell cards"

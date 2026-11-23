@@ -8,6 +8,10 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from shared.models import File as StoredFile
 from tests.access_support import crashless_client, scoped_client
+from tests.file_storage_fakes import (
+    FailingFileStorage,
+    injected_file_storage,
+)
 from tests.file_upload_support import (
     LEARNER_FOLDER_ID,
     RECORDED_FILES,
@@ -18,10 +22,6 @@ from tests.file_upload_support import (
     sessions_without_a_home_folder,
     storage_directory,
     upload,
-)
-from tests.file_storage_fakes import (
-    FailingFileStorage,
-    injected_file_storage,
 )
 from tests.support import authorization
 

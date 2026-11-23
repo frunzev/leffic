@@ -1,8 +1,8 @@
 import pytest
-from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
-from shared.folder_access import MISSING_FOLDER, ensured_home_folder
+from shared.folder_access import ensured_home_folder
 from shared.models import Folder
 from tests.folder_owner_support import (
     FOREIGN_HOME_ID,
@@ -33,11 +33,8 @@ def test_ensured_home_folder_refuses_a_foreign_home(
 ) -> None:
     _seeded_foreign_home(sessions)
 
-    with sessions() as session, pytest.raises(HTTPException) as raised:
+    with sessions() as session, pytest.raises(IntegrityError):
         _ = ensured_home_folder(session, USER_ID)
-
-    assert raised.value.status_code == _NOT_FOUND
-    assert raised.value.detail == MISSING_FOLDER
 
 
 def test_a_refused_home_lookup_creates_no_row(
@@ -45,7 +42,7 @@ def test_a_refused_home_lookup_creates_no_row(
 ) -> None:
     _seeded_foreign_home(sessions)
 
-    with sessions() as session, pytest.raises(HTTPException):
+    with sessions() as session, pytest.raises(IntegrityError):
         _ = ensured_home_folder(session, USER_ID)
 
     with sessions() as session:

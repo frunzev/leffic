@@ -9,6 +9,10 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from tests.access_support import _wired_app
+from tests.file_storage_fakes import (
+    FailingFileStorage,
+    injected_file_storage,
+)
 from tests.file_upload_support import (
     EXTENSIONS,
     RECORDED_FILES,
@@ -18,10 +22,6 @@ from tests.file_upload_support import (
     numbered_filenames,
     storage_directory,
     upload,
-)
-from tests.file_storage_fakes import (
-    FailingFileStorage,
-    injected_file_storage,
 )
 from tests.folder_seeding import seeded_folder
 from tests.property_support import property_world

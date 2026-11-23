@@ -34,7 +34,7 @@ class ImageTextExtractor(TextExtractor):
             raise TextRecognitionError(message) from missing
 
         if completed_recognition.returncode != 0:
-            complaint = completed_recognition.stderr.decode()
+            complaint = completed_recognition.stderr.decode().strip()
             raise TextRecognitionError(complaint)
 
         recognized_text = completed_recognition.stdout.decode()

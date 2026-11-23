@@ -17,15 +17,6 @@ _SEGMENT_SEPARATOR = "."
 _TOKEN_SEGMENT_COUNT = 3
 _TEXT_ENCODING = "utf-8"
 _SURROGATE_HANDLING = "surrogatepass"
-_AMBIGUOUS_SEGMENT = (
-    "A task token segment may not contain the segment separator"
-)
-
-
-class AmbiguousTokenSegmentError(ValueError):
-    def __init__(self, segment: str) -> None:
-        super().__init__(f"{_AMBIGUOUS_SEGMENT}: {segment!r}")
-
 
 def _encoded(text: str) -> bytes:
     return text.encode(_TEXT_ENCODING, _SURROGATE_HANDLING)
@@ -50,10 +41,6 @@ def _refusal() -> HTTPException:
 class SecretSignedTaskTokens(TaskTokenSigner, TaskTokenVerifier):
     @override
     def signed_task_id(self, task_id: str, folder_id: str) -> str:
-        for segment in (task_id, folder_id):
-            if _SEGMENT_SEPARATOR in segment:
-                raise AmbiguousTokenSegmentError(segment)
-
         signature = _signature_of(task_id, folder_id)
 
         return _SEGMENT_SEPARATOR.join((task_id, folder_id, signature))

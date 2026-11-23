@@ -1,6 +1,6 @@
 import uuid
 from datetime import UTC, datetime
-from typing import Annotated, Final, TypeGuard
+from typing import Annotated, Final, cast
 
 from celery.result import AsyncResult
 from fastapi import APIRouter, Depends, params
@@ -23,11 +23,6 @@ _SCOPED_TO_THE_CALLER: Final[list[params.Depends]] = [
     Depends(get_db),
 ]
 _SUCCEEDED: Final[str] = "SUCCESS"
-_FAILED: Final[str] = "FAILURE"
-
-
-def _is_object_dict(value: object) -> TypeGuard[dict[str, object]]:
-    return isinstance(value, dict)
 
 
 def _finished_result(task_id: str) -> tuple[str, dict[str, object] | None]:
@@ -37,38 +32,20 @@ def _finished_result(task_id: str) -> tuple[str, dict[str, object] | None]:
     if not task_result.ready() or status != _SUCCEEDED:
         return status, None
 
-    finished: object = task_result.result
+    finished = cast("dict[str, object]", task_result.result)
 
-    if _is_object_dict(finished):
-        return status, finished
-
-    return _FAILED, None
-
-
-def _as_identifier(row_id: object) -> uuid.UUID | None:
-    try:
-        return uuid.UUID(str(row_id))
-    except ValueError:
-        return None
+    return status, finished
 
 
 def _deck_name(db: DatabaseSession, deck_id: object) -> str | None:
-    identifier = _as_identifier(deck_id)
-
-    if identifier is None:
-        return None
-
+    identifier = uuid.UUID(str(deck_id))
     deck = db.query(FlashcardDeck).filter_by(id=identifier).first()
 
     return None if deck is None else str(deck.name)
 
 
 def _test_name(db: DatabaseSession, test_id: object) -> str | None:
-    identifier = _as_identifier(test_id)
-
-    if identifier is None:
-        return None
-
+    identifier = uuid.UUID(str(test_id))
     test = db.query(Test).filter_by(id=identifier).first()
 
     return None if test is None else str(test.name)

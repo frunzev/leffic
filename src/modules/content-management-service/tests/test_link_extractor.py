@@ -4,7 +4,6 @@ from youtube_transcript_api import NoTranscriptFound
 
 from features.study_units_generation.youtube_transcript import (
     extract_video_id,
-    get_youtube_transcript_auto,
 )
 from tests.support import FakeHTTPError
 
@@ -98,5 +97,5 @@ def test_returns_no_video_id_when_the_query_has_none() -> None:
     assert extract_video_id("https://youtube.com/watch?t=1") is None
 
 
-def test_no_transcript_without_a_video_id() -> None:
-    assert get_youtube_transcript_auto("https://example.com") is None
+def test_a_short_link_without_a_video_names_no_video() -> None:
+    assert extract_video_id("https://youtu.be/") is None

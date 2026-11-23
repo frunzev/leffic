@@ -1,83 +1,28 @@
-from typing import Self, cast
+from typing import cast
 
 import pytest
-from openai import OpenAIError
 
 from shared.ai_manager import (
     OpenAIManager,
-    RequestCost,
     create_openai_factory,
 )
 from shared.model_rates import GPT_4_1_NANO, MODEL_RATES
+from tests.openai_fakes import (
+    FakeClient,
+    FakeResponse,
+    openai_manager,
+)
 
 _SYSTEM_PROMPT = "You are helpful"
 _USER_PROMPT = "Summarise this"
 
 
-class FakeUsageDetails:
-    def __init__(self, cached_tokens: int) -> None:
-        super().__init__()
-        self.cached_tokens: int = cached_tokens
-
-
-class FakeUsage:
-    def __init__(
-        self, input_tokens: int, output_tokens: int, cached_tokens: int
-    ) -> None:
-        super().__init__()
-        self.input_tokens: int = input_tokens
-        self.output_tokens: int = output_tokens
-        self.input_tokens_details: FakeUsageDetails = FakeUsageDetails(
-            cached_tokens
-        )
-
-
-class FakeResponse:
-    def __init__(
-        self, output_text: str, usage: FakeUsage | None = None
-    ) -> None:
-        super().__init__()
-        self.output_text: str = output_text
-        self.usage: FakeUsage | None = usage
-
-
-class FakeResponses:
-    def __init__(self, answers: list[object]) -> None:
-        super().__init__()
-        self.answers: list[object] = answers
-        self.calls: list[object] = []
-
-    def create(self, **kwargs: object) -> object:
-        self.calls.append(kwargs)
-        answer = self.answers.pop(0)
-
-        if isinstance(answer, OpenAIError):
-            raise answer
-
-        return answer
-
-
-class FakeClient:
-    def __init__(self, answers: list[object]) -> None:
-        super().__init__()
-        self.responses: FakeResponses = FakeResponses(answers)
-
-    def __enter__(self) -> Self:
-        return self
-
-    def __exit__(self, *_: object) -> None:
-        return None
-
-
-def _manager(answers: list[object], rates_for: str | None = None):  # noqa: ANN202
-    client = FakeClient(answers)
+def _manager(
+    answers: list[object], rates_for: str | None = None
+) -> tuple[OpenAIManager, FakeClient]:
     rates = MODEL_RATES.get(rates_for) if rates_for else None
 
-    return OpenAIManager(
-        client,  # pyright: ignore[reportArgumentType]
-        "gpt-5-mini",
-        RequestCost(rates),
-    ), client
+    return openai_manager(answers, "gpt-5-mini", rates)
 
 
 def test_the_factory_defaults_to_the_mini_model() -> None:

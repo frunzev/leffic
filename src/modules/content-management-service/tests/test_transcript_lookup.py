@@ -6,7 +6,8 @@ from unittest import mock
 from youtube_transcript_api import NoTranscriptFound
 
 from features.study_units_generation.youtube_transcript import (
-    get_youtube_transcript_auto,
+    PREFERRED_TRANSCRIPT_LANGUAGES,
+    transcript_of_video,
 )
 from tests.support import FakeHTTPError
 
@@ -111,7 +112,7 @@ def test_the_video_id_is_passed_to_the_transcript_api() -> None:
     )
 
     with mock.patch(_TRANSCRIPT_API_LIST, return_value=listing) as listed:
-        _ = get_youtube_transcript_auto(f"https://youtu.be/{_VIDEO_ID}")
+        _ = transcript_of_video(_VIDEO_ID, PREFERRED_TRANSCRIPT_LANGUAGES)
 
     assert listed.call_args.args[0] == _VIDEO_ID
 
@@ -120,9 +121,7 @@ def test_the_preferred_language_is_asked_for() -> None:
     listing = RecordingTranscriptList()
 
     with _patch_transcripts(listing):
-        _ = get_youtube_transcript_auto(
-            f"https://youtu.be/{_VIDEO_ID}", ("de", "en")
-        )
+        _ = transcript_of_video(_VIDEO_ID, ("de", "en"))
 
     assert listing.asked == [["de"], ["en"]]
 
@@ -133,8 +132,6 @@ def test_a_generated_transcript_is_not_mistaken_for_a_manual_one() -> None:
     listing = FakeTranscriptList([generated, manual])
 
     with _patch_transcripts(listing):
-        transcript = get_youtube_transcript_auto(
-            f"https://youtu.be/{_VIDEO_ID}"
-        )
+        transcript = transcript_of_video(_VIDEO_ID, PREFERRED_TRANSCRIPT_LANGUAGES)
 
     assert transcript == "manual"
