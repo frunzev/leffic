@@ -7,10 +7,10 @@ import 'package:leffic/shared/api/api_error.dart';
 import '../../support/property.dart';
 
 void main() {
-  test('chatFailureMessage property explains only an unavailable chat', () {
+  test('chatFailureMessage property explains only a refused chat', () {
     forAll(
       (random) => (
-        oneOf(random, [503, integerBetween(random, 400, 599)]),
+        oneOf(random, [402, 503, integerBetween(random, 400, 599)]),
         'Claude Code did not answer ${wordOf(random)}',
       ),
       (example) {
@@ -22,7 +22,9 @@ void main() {
         );
         final message = chatFailureMessage(failure);
 
-        expect(message, status == 503 ? detail : genericChatFailure);
+        final isExplained = status == 402 || status == 503;
+
+        expect(message, isExplained ? detail : genericChatFailure);
       },
     );
   });

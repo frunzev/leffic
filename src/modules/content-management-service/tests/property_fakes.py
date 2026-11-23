@@ -8,7 +8,7 @@ from openai import APIConnectionError
 class AnsweringAi(Protocol):
     def get_ai_res_hist(
         self, system_prompt: str, history: list[object]
-    ) -> str: ...
+    ) -> tuple[str, float | None]: ...
 
 
 @final
@@ -28,18 +28,18 @@ class FakeAiManager:
 
     def get_ai_res_hist(
         self, system_prompt: str, history: list[object]
-    ) -> str:
+    ) -> tuple[str, float | None]:
         _ = system_prompt
         _ = history
 
-        return self.answer
+        return self.answer, None
 
 
 @final
 class UnavailableAiManager:
     def get_ai_res_hist(
         self, system_prompt: str, history: list[object]
-    ) -> str:
+    ) -> tuple[str, float | None]:
         _ = system_prompt
         _ = history
 

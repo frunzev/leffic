@@ -136,7 +136,7 @@ def test_reports_no_cost_without_rates() -> None:
 def test_history_answers_prepend_the_system_prompt() -> None:
     manager, client = _manager([FakeResponse("hello there")])
 
-    answer = manager.get_ai_res_hist(
+    answer, _cost = manager.get_ai_res_hist(
         _SYSTEM_PROMPT, [{"role": "user", "content": "hi"}]
     )
 

@@ -4,7 +4,10 @@ from typing import cast
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from features.account.provider_key_router import _keys_of, _saved_key
+from features.account.provider_key_lookup import (
+    provider_keys_of,
+    saved_provider_key,
+)
 from tests.property_support import (
     PHRASE,
     property_client,
@@ -112,27 +115,29 @@ def test_delete_provider_key_property_leaves_nothing_to_open(
 
 @settings(max_examples=25, deadline=None)
 @given(st.lists(_PROVIDERS, unique=True, max_size=2))
-def test__keys_of_property_never_reaches_another_owners_keys(
+def test_provider_keys_of_property_never_reaches_another_owners_keys(
     providers: list[str],
 ) -> None:
     owner = uuid.uuid4()
     stranger = uuid.uuid4()
 
     with seeded_provider_key(owner, providers) as session:
-        assert len(_keys_of(session, str(owner))) == len(providers)
-        assert _keys_of(session, str(stranger)) == []
+        assert len(provider_keys_of(session, str(owner))) == len(providers)
+        assert provider_keys_of(session, str(stranger)) == []
 
 
 @settings(max_examples=25, deadline=None)
 @given(_PROVIDERS)
-def test__saved_key_property_finds_only_the_provider_asked_for(
+def test_saved_provider_key_property_finds_only_the_provider_asked_for(
     provider: str,
 ) -> None:
     owner = uuid.uuid4()
 
     with seeded_provider_key(owner, [provider]) as session:
-        found = _saved_key(session, str(owner), provider)
+        found = saved_provider_key(session, str(owner), provider)
 
         assert found is not None
         assert found.provider == provider
-        assert _saved_key(session, str(owner), "missing-provider") is None
+        missing = saved_provider_key(session, str(owner), "missing-provider")
+
+        assert missing is None

@@ -14,17 +14,13 @@ from features.study_units_generation.generation_router import (
     _queued_flashcards,
     _queued_test,
 )
-from features.study_units_generation.study_unit_source import (
-    StudyUnitSource,
-)
 from shared.models import FlashcardDeck, Test
 from tests.folder_seeding import seeded_folder
 from tests.property_fakes import RecordingQueuedTask
-from tests.support import in_memory_sessions
+from tests.support import USER_ID, in_memory_sessions
 from tests.task_token_support import TASK_TOKENS
 
 _SESSIONS = in_memory_sessions()
-_NO_SOURCE = StudyUnitSource(kind=None, reference=None)
 _FLASHCARD_TYPES = st.lists(
     st.sampled_from(["basic", "cloze", "feynman", "list"]),
     min_size=1,
@@ -82,9 +78,9 @@ def test__queued_flashcards_property_queues_one_job_for_every_type(
         ):
             queued = _queued_flashcards(
                 request_data,
+                USER_ID,
                 str(folder_id),
                 session,
-                _NO_SOURCE,
                 TASK_TOKENS,
             )
 
@@ -100,7 +96,7 @@ def test__queued_flashcards_property_queues_one_job_for_every_type(
     assert all(
         call
         == {
-            "ai_model": "gpt-4.1-nano",
+            "requester": {"user_id": USER_ID, "ai_model": "gpt-4.1-nano"},
             "extracted_text": "material",
             "deck_id": queued["flashcard_deck_id"],
             "flashcard_type": call["flashcard_type"],
@@ -132,9 +128,9 @@ def test__queued_test_property_queues_one_job_for_every_type(
         ):
             queued = _queued_test(
                 request_data,
+                USER_ID,
                 str(folder_id),
                 session,
-                _NO_SOURCE,
                 TASK_TOKENS,
             )
 
@@ -148,7 +144,7 @@ def test__queued_test_property_queues_one_job_for_every_type(
     assert all(
         call
         == {
-            "ai_model": "gpt-4.1-nano",
+            "requester": {"user_id": USER_ID, "ai_model": "gpt-4.1-nano"},
             "extracted_text": "material",
             "test_id": queued["test_id"],
             "item_type": call["item_type"],
@@ -176,9 +172,9 @@ def test__queued_flashcards_property_falls_back_to_one_default_job(
         ):
             queued = _queued_flashcards(
                 request_data,
+                USER_ID,
                 str(folder_id),
                 session,
-                _NO_SOURCE,
                 TASK_TOKENS,
             )
 
@@ -205,9 +201,9 @@ def test__queued_test_property_falls_back_to_one_default_job(
         ):
             queued = _queued_test(
                 request_data,
+                USER_ID,
                 str(folder_id),
                 session,
-                _NO_SOURCE,
                 TASK_TOKENS,
             )
 

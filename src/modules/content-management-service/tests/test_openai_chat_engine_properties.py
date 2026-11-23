@@ -7,6 +7,7 @@ from openai import OpenAIError
 
 from features.chatbot.chat_engine import ChatEngineUnavailableError
 from features.chatbot.openai_chat_engine import OpenAIChatEngine
+from shared.ai_budget import UnlimitedAiBudget
 from shared.ai_manager import AiMessage
 
 _TEXT = st.text(min_size=1, max_size=40)
@@ -27,18 +28,18 @@ class ScriptedAi:
 
     def get_ai_res_hist(
         self, system_prompt: str, history: list[AiMessage]
-    ) -> str:
+    ) -> tuple[str, float | None]:
         _ = system_prompt
         self.histories.append(history)
 
-        return self.answer
+        return self.answer, None
 
 
 class FailingAi(ScriptedAi):
     @override
     def get_ai_res_hist(
         self, system_prompt: str, history: list[AiMessage]
-    ) -> str:
+    ) -> tuple[str, float | None]:
         _ = (system_prompt, history)
 
         raise OpenAIError(self.answer)
@@ -60,7 +61,7 @@ def test_answer_property_hands_back_the_model_reply_for_the_conversation(
     conversation: list[dict[str, str]], reply: str
 ) -> None:
     ai = ScriptedAi(reply)
-    engine = OpenAIChatEngine(ScriptedFactory(ai))
+    engine = OpenAIChatEngine(ScriptedFactory(ai), UnlimitedAiBudget())
 
     assert engine.answer(conversation, _USER_ID) == reply
     assert ai.histories == [conversation]
@@ -71,7 +72,9 @@ def test_answer_property_hands_back_the_model_reply_for_the_conversation(
 def test_answer_property_reports_an_unreachable_model(
     conversation: list[dict[str, str]], failure: str
 ) -> None:
-    engine = OpenAIChatEngine(ScriptedFactory(FailingAi(failure)))
+    engine = OpenAIChatEngine(
+        ScriptedFactory(FailingAi(failure)), UnlimitedAiBudget()
+    )
 
     with pytest.raises(ChatEngineUnavailableError):
         _ = engine.answer(conversation, _USER_ID)
@@ -89,7 +92,7 @@ class KeylessFactory:
 def test_answer_property_reports_a_missing_key_as_unavailable(
     conversation: list[dict[str, str]],
 ) -> None:
-    engine = OpenAIChatEngine(KeylessFactory())
+    engine = OpenAIChatEngine(KeylessFactory(), UnlimitedAiBudget())
 
     with pytest.raises(ChatEngineUnavailableError, match="Settings"):
         _ = engine.answer(conversation, _USER_ID)

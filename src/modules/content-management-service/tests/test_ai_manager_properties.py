@@ -138,7 +138,7 @@ def test_get_ai_res_hist_property_leads_with_the_system_prompt(
         [{"role": "user", "content": turn} for turn in turns],
     )
     manager, client = _manager([FakeResponse("answered")])
-    spoken = manager.get_ai_res_hist(_SYSTEM_PROMPT, history)
+    spoken, _cost = manager.get_ai_res_hist(_SYSTEM_PROMPT, history)
     sent = cast("list[dict[str, object]]", _sent(client, "input"))
 
     assert spoken == "answered"

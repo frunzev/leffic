@@ -75,7 +75,9 @@ def _run_test(
         mock.patch.object(generation_tasks, "SessionLocal", sessions),
     ):
         return generation_tasks._generate_test_items_of_type_task(
-            ai_model=model,
+            requester=generation_tasks.GenerationRequester(
+                user_id=USER_ID, ai_model=model
+            ),
             extracted_text=_TEXT,
             test_id=test_id,
             item_type="multiple_choice",

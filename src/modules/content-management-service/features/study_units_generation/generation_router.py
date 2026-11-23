@@ -12,6 +12,7 @@ from features.study_units_generation.generation_request import (
 )
 from features.study_units_generation.generation_tasks import (
     FlashcardGenerationSettings,
+    GenerationRequester,
     generate_flashcards_of_type_task,
     generate_note_task,
     generate_test_items_of_type_task,
@@ -30,6 +31,8 @@ from features.study_units_generation.task_ownership import (
 from features.study_units_generation.task_token_contracts import (
     TaskTokenSigner,
 )
+from shared.ai_budget_guard import ensure_ai_budget
+from shared.chosen_ai_engine import CHOSEN_AI_ENGINE
 from shared.dependencies import AuthenticatedUserId, DatabaseSession
 from shared.folder_access import ensured_home_folder, owned_folder_id
 
@@ -59,27 +62,25 @@ async def generate_study_units(
         )
 
     target_folder_id = owned_folder_id(db, user_id, folder_id)
+    ensure_ai_budget(user_id, CHOSEN_AI_ENGINE)
 
     return _queued_tasks(
-        request_data, target_folder_id, db, task_token_signer
+        request_data, user_id, target_folder_id, db, task_token_signer
     )
 
 
 def _queued_tasks(
     request_data: GenerationRequest,
+    user_id: str,
     folder_id: str,
     db: DatabaseSession,
     task_token_signer: TaskTokenSigner,
 ) -> dict[str, object]:
     queued: dict[str, object] = {}
-    source = StudyUnitSource(
-        kind=request_data.source_kind,
-        reference=request_data.source_reference,
-    )
 
     if request_data.note:
         note_task = generate_note_task.delay(
-            ai_model=request_data.ai_model,
+            requester=_requester(request_data, user_id),
             extracted_text=request_data.text,
             folder_id=folder_id,
             source_kind=request_data.source_kind,
@@ -91,35 +92,48 @@ def _queued_tasks(
 
     if request_data.flashcards:
         queued_flashcards = _queued_flashcards(
-            request_data, folder_id, db, source, task_token_signer
+            request_data, user_id, folder_id, db, task_token_signer
         )
         queued.update(queued_flashcards)
 
     if request_data.test:
         queued_test = _queued_test(
-            request_data, folder_id, db, source, task_token_signer
+            request_data, user_id, folder_id, db, task_token_signer
         )
         queued.update(queued_test)
 
     return queued
 
 
+def _requester(
+    request_data: GenerationRequest, user_id: str
+) -> GenerationRequester:
+    return GenerationRequester(user_id=user_id, ai_model=request_data.ai_model)
+
+
+def _source(request_data: GenerationRequest) -> StudyUnitSource:
+    return StudyUnitSource(
+        kind=request_data.source_kind,
+        reference=request_data.source_reference,
+    )
+
+
 def _queued_flashcards(
     request_data: GenerationRequest,
+    user_id: str,
     folder_id: str,
     db: DatabaseSession,
-    source: StudyUnitSource,
     task_token_signer: TaskTokenSigner,
 ) -> dict[str, object]:
     wanted = request_data.flashcards or FlashcardsMetadata()
-    deck_id = create_flashcard_deck(db, folder_id, source)
+    deck_id = create_flashcard_deck(db, folder_id, _source(request_data))
     task_ids: list[str] = []
 
     for flashcard_type in requested_names(
         tuple(wanted.types or ()), DEFAULT_FLASHCARD_TYPES
     ):
         flashcard_task = generate_flashcards_of_type_task.delay(
-            ai_model=request_data.ai_model,
+            requester=_requester(request_data, user_id),
             extracted_text=request_data.text,
             deck_id=deck_id,
             flashcard_type=flashcard_type,
@@ -138,20 +152,20 @@ def _queued_flashcards(
 
 def _queued_test(
     request_data: GenerationRequest,
+    user_id: str,
     folder_id: str,
     db: DatabaseSession,
-    source: StudyUnitSource,
     task_token_signer: TaskTokenSigner,
 ) -> dict[str, object]:
     wanted = request_data.test or TestMetadata()
-    test_id = create_test(db, folder_id, source)
+    test_id = create_test(db, folder_id, _source(request_data))
     task_ids: list[str] = []
 
     for item_type in requested_names(
         tuple(wanted.types or ()), DEFAULT_TEST_ITEM_TYPES
     ):
         test_task = generate_test_items_of_type_task.delay(
-            ai_model=request_data.ai_model,
+            requester=_requester(request_data, user_id),
             extracted_text=request_data.text,
             test_id=test_id,
             item_type=item_type,

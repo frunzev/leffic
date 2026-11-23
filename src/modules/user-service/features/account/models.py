@@ -10,6 +10,8 @@ _PROVIDER_LENGTH = 30
 _SEALED_KEY_LENGTH = 500
 _SALT_LENGTH = 50
 _HINT_LENGTH = 8
+_MONTH_LENGTH = 7
+_NO_MONTH = ""
 
 
 class ProviderKey(UuidPrimaryKey, Base):
@@ -37,4 +39,10 @@ class ProviderKey(UuidPrimaryKey, Base):
     )
     spent_cents: Mapped[int] = mapped_column(
         Integer, default=0, nullable=False
+    )
+    spent_month: Mapped[str] = mapped_column(
+        String(_MONTH_LENGTH),
+        default=_NO_MONTH,
+        server_default=_NO_MONTH,
+        nullable=False,
     )

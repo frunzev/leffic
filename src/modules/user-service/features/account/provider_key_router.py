@@ -13,7 +13,12 @@ from features.account.bcrypt_fernet_cryptography import (
 )
 from features.account.claims_extractor import get_user_id_from_jwt
 from features.account.models import ProviderKey
+from features.account.monthly_spending import current_month, spent_this_month
 from features.account.password_cryptography import PasswordCryptography
+from features.account.provider_key_lookup import (
+    provider_keys_of,
+    saved_provider_key,
+)
 from shared.database import get_db
 from shared.password_hashing import Password
 
@@ -39,31 +44,27 @@ class ProviderKeyRequest(BaseModel):
     monthly_limit_cents: int | None = None
 
 
-def _keys_of(db: Session, user_id: str) -> list[ProviderKey]:
-    return (
-        db.query(ProviderKey)
-        .filter(ProviderKey.user_id == uuid.UUID(user_id))
-        .all()
-    )
-
-
 @provider_key_router.get("")
 async def read_provider_keys(
     user_id: AuthenticatedUserId, db: DatabaseSession
 ) -> JSONResponse:
-    return JSONResponse(
-        content={
-            "provider_keys": [
-                {
-                    "provider": saved_key.provider,
-                    "hint": saved_key.hint,
-                    "monthly_limit_cents": saved_key.monthly_limit_cents,
-                    "spent_cents": saved_key.spent_cents,
-                }
-                for saved_key in _keys_of(db, user_id)
-            ]
-        }
-    )
+    month = current_month()
+    listed_keys: list[dict[str, object]] = []
+
+    for saved_key in provider_keys_of(db, user_id):
+        spent = spent_this_month(
+            saved_key.spent_cents, saved_key.spent_month, month
+        )
+        listed_keys.append(
+            {
+                "provider": saved_key.provider,
+                "hint": saved_key.hint,
+                "monthly_limit_cents": saved_key.monthly_limit_cents,
+                "spent_cents": spent,
+            }
+        )
+
+    return JSONResponse(content={"provider_keys": listed_keys})
 
 
 @provider_key_router.put("")
@@ -91,7 +92,7 @@ async def save_provider_key(
     salt = key_sealing.new_salt()
     sealed = cryptography.seal_key(key, request_data.password, salt)
     hint = key_sealing.hint_for(key)
-    existing = _saved_key(db, user_id, request_data.provider)
+    existing = saved_provider_key(db, user_id, request_data.provider)
 
     if existing is None:
         db.add(
@@ -129,7 +130,7 @@ async def open_provider_key(
     cryptography: Cryptography,
 ) -> JSONResponse:
     _ = confirmed_account(db, user_id, request_data.password, cryptography)
-    saved_key = _saved_key(db, user_id, provider)
+    saved_key = saved_provider_key(db, user_id, provider)
 
     if saved_key is None:
         raise HTTPException(
@@ -148,24 +149,11 @@ async def open_provider_key(
     return JSONResponse(content={"key": opened})
 
 
-def _saved_key(
-    db: Session, user_id: str, provider: str
-) -> ProviderKey | None:
-    return (
-        db.query(ProviderKey)
-        .filter(
-            ProviderKey.user_id == uuid.UUID(user_id),
-            ProviderKey.provider == provider,
-        )
-        .first()
-    )
-
-
 @provider_key_router.delete("/{provider}")
 async def delete_provider_key(
     provider: str, user_id: AuthenticatedUserId, db: DatabaseSession
 ) -> JSONResponse:
-    saved_key = _saved_key(db, user_id, provider)
+    saved_key = saved_provider_key(db, user_id, provider)
 
     if saved_key is None:
         raise HTTPException(

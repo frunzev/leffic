@@ -22,7 +22,8 @@ from features.study_units_generation.study_unit_types import (
     study_unit_type,
 )
 from features.study_units_generation.study_unit_writer import save_note
-from shared.chosen_ai_engine import chosen_ai_factory
+from shared.ai_budget import provide_ai_budget
+from shared.chosen_ai_engine import CHOSEN_AI_ENGINE, chosen_ai_factory
 from shared.database import SessionLocal
 
 _DECK_NAME = "deck_name"
@@ -33,32 +34,55 @@ NOTE_TASK = "generate_note"
 TEST_TASK = "generate_test_items_of_type"
 
 
+class GenerationRequester(TypedDict):
+    user_id: str
+    ai_model: str | None
+
+
 class FlashcardGenerationSettings(TypedDict):
     comprehensiveness: str
     verbosity: str
     amount: int | None
 
 
+def _billed_generation(
+    *,
+    requester: GenerationRequester,
+    system_prompt: str,
+    extracted_text: str,
+) -> dict[str, object]:
+    ai = chosen_ai_factory.get_ai(requester["ai_model"])
+    generated, cost = ai.get_ai_res(
+        system_prompt=system_prompt, user_prompt=extracted_text
+    )
+    provide_ai_budget().record_spending(
+        requester["user_id"], CHOSEN_AI_ENGINE, cost
+    )
+
+    return generated
+
+
 def _generate_flashcards_of_type_task(
     *,
-    ai_model: str | None,
+    requester: GenerationRequester,
     extracted_text: str,
     deck_id: str,
     flashcard_type: str,
     settings: FlashcardGenerationSettings,
 ) -> dict[str, object]:
     unit_type = study_unit_type(flashcard_type)
-    ai = chosen_ai_factory.get_ai(ai_model)
-    generated, _unused = ai.get_ai_res(
-        system_prompt=rendered_prompt(
-            unit_type.prompt_file,
-            flashcard_values(
-                settings["comprehensiveness"],
-                settings["verbosity"],
-                settings["amount"],
-            ),
+    system_prompt = rendered_prompt(
+        unit_type.prompt_file,
+        flashcard_values(
+            settings["comprehensiveness"],
+            settings["verbosity"],
+            settings["amount"],
         ),
-        user_prompt=extracted_text,
+    )
+    generated = _billed_generation(
+        requester=requester,
+        system_prompt=system_prompt,
+        extracted_text=extracted_text,
     )
 
     with SessionLocal() as db:
@@ -76,19 +100,20 @@ def _generate_flashcards_of_type_task(
 
 def _generate_test_items_of_type_task(
     *,
-    ai_model: str | None,
+    requester: GenerationRequester,
     extracted_text: str,
     test_id: str,
     item_type: str,
     amount: int | None,
 ) -> dict[str, object]:
     unit_type = study_unit_type(item_type)
-    ai = chosen_ai_factory.get_ai(ai_model)
-    generated, _unused = ai.get_ai_res(
-        system_prompt=rendered_prompt(
-            unit_type.prompt_file, assessment_item_values(amount)
-        ),
-        user_prompt=extracted_text,
+    system_prompt = rendered_prompt(
+        unit_type.prompt_file, assessment_item_values(amount)
+    )
+    generated = _billed_generation(
+        requester=requester,
+        system_prompt=system_prompt,
+        extracted_text=extracted_text,
     )
 
     with SessionLocal() as db:
@@ -106,16 +131,16 @@ def _generate_test_items_of_type_task(
 
 def _generate_note_task(
     *,
-    ai_model: str | None,
+    requester: GenerationRequester,
     extracted_text: str,
     folder_id: str,
     source_kind: str | None,
     source_reference: str | None,
 ) -> dict[str, object]:
-    ai = chosen_ai_factory.get_ai(ai_model)
-    note, _unused = ai.get_ai_res(
+    note = _billed_generation(
+        requester=requester,
         system_prompt=rendered_prompt(NOTE_PROMPT_FILE, {}),
-        user_prompt=extracted_text,
+        extracted_text=extracted_text,
     )
     note_name = str(note.get("note_name"))
 

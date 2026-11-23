@@ -19,21 +19,18 @@ from features.study_units_generation.generation_router import (
     _queued_flashcards,
     _queued_test,
 )
-from features.study_units_generation.study_unit_source import (
-    StudyUnitSource,
-)
 from features.study_units_generation.task_token_contracts import (
     TaskTokenSigner,
 )
 from tests.folder_seeding import seeded_folder
 from tests.property_fakes import RecordingQueuedTask
 from tests.property_support import property_world
-from tests.support import authorization, in_memory_sessions
+from tests.support import USER_ID, authorization, in_memory_sessions
 from tests.task_token_support import TASK_TOKENS
 
 type TypeAmounts = dict[str, int]
 type QueuedJobs = Callable[
-    [GenerationRequest, str, Session, StudyUnitSource, TaskTokenSigner],
+    [GenerationRequest, str, str, Session, TaskTokenSigner],
     dict[str, object],
 ]
 
@@ -43,7 +40,6 @@ _FLASHCARDS_TASK = "generate_flashcards_of_type_task"
 _TEST_TASK = "generate_test_items_of_type_task"
 _CLIENT, _ = property_world()
 _SESSIONS = in_memory_sessions()
-_NO_SOURCE = StudyUnitSource(kind=None, reference=None)
 _FLASHCARD_TYPE_NAMES = ("basic", "cloze", "feynman", "list")
 _TEST_ITEM_TYPE_NAMES = ("multiple_choice", "true_or_false", "short_answer")
 _TEST_ITEM_TYPES = st.sampled_from(_TEST_ITEM_TYPE_NAMES)
@@ -108,9 +104,9 @@ def _queued_calls(
         with mock.patch.object(generation_router, task_name, queued_task):
             _ = queue_jobs(
                 request_data,
+                USER_ID,
                 str(folder_id),
                 session,
-                _NO_SOURCE,
                 TASK_TOKENS,
             )
 

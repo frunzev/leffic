@@ -22,6 +22,10 @@ _SAVED_AGAIN_STEP = (
     'I saved the {provider_name} key "{provider_key}" '
     "again with my new password"
 )
+_LIMITED_SAVED_KEY_STEP = (
+    'I saved the {provider_name} key "{provider_key}" '
+    "with a monthly limit of {limit_cents:d} cents"
+)
 _LIMITED_KEY_STEP = (
     'I save the {provider_name} key "{provider_key}" '
     "with a monthly limit of {limit_cents:d} cents"
@@ -91,6 +95,7 @@ def save_key_again(
 
 
 @when(parsers.parse(_LIMITED_KEY_STEP))
+@given(parsers.parse(_LIMITED_SAVED_KEY_STEP))
 def save_limited_key(
     account_client: TestClient,
     provider_name: str,

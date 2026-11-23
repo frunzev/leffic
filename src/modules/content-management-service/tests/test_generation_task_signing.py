@@ -41,22 +41,23 @@ _RESPONSE_KEYS: Final[frozenset[str]] = frozenset({
 _HELPER_SIGNATURES: Final[dict[str, tuple[str, ...]]] = {
     "_queued_tasks": (
         "request_data",
+        "user_id",
         "folder_id",
         "db",
         "task_token_signer",
     ),
     "_queued_flashcards": (
         "request_data",
+        "user_id",
         "folder_id",
         "db",
-        "source",
         "task_token_signer",
     ),
     "_queued_test": (
         "request_data",
+        "user_id",
         "folder_id",
         "db",
-        "source",
         "task_token_signer",
     ),
 }

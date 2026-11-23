@@ -7,11 +7,12 @@ from features.chatbot.chat_engine import (
     ChatEngineUnavailableError,
     Conversation,
 )
-from shared.ai_manager import AiMessage
+from shared.ai_budget import AiBudget
+from shared.ai_manager import AiMessage, PricedAnswer
+from shared.chosen_ai_engine import OPENAI_ENGINE
 
 _SYSTEM_PROMPT = (
-    "You are a very helpful assistant! "
-    "You always answer shortly and clearly"
+    "You are a very helpful assistant! You always answer shortly and clearly"
 )
 _MODEL_UNAVAILABLE = "The assistant is unavailable right now. Try again."
 _KEY_MISSING = (
@@ -23,7 +24,7 @@ _KEY_MISSING = (
 class ConversationModel(Protocol):
     def get_ai_res_hist(
         self, system_prompt: str, history: list[AiMessage]
-    ) -> str: ...
+    ) -> PricedAnswer: ...
 
 
 class ConversationModelFactory(Protocol):
@@ -31,8 +32,11 @@ class ConversationModelFactory(Protocol):
 
 
 class OpenAIChatEngine(ChatEngine):
-    def __init__(self, model_factory: ConversationModelFactory) -> None:
+    def __init__(
+        self, model_factory: ConversationModelFactory, ai_budget: AiBudget
+    ) -> None:
         self._model_factory: ConversationModelFactory = model_factory
+        self._ai_budget: AiBudget = ai_budget
 
     @override
     def answer(self, conversation: Conversation, user_id: str) -> str:
@@ -44,10 +48,14 @@ class OpenAIChatEngine(ChatEngine):
             raise ChatEngineUnavailableError(_KEY_MISSING) from missing_key
 
         try:
-            return model.get_ai_res_hist(
+            answer, cost = model.get_ai_res_hist(
                 system_prompt=_SYSTEM_PROMPT, history=history
             )
         except OpenAIError as unreachable:
             raise ChatEngineUnavailableError(
                 _MODEL_UNAVAILABLE
             ) from unreachable
+
+        self._ai_budget.record_spending(user_id, OPENAI_ENGINE, cost)
+
+        return answer

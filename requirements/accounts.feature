@@ -243,6 +243,73 @@ Feature: Accounts
       When I save the OpenAI key "sk-live-000000000000000007Xa2"
       Then my OpenAI key has no monthly limit
 
+  Rule: Spending on a key adds up within each month
+
+    @accounts
+    Scenario: Recorded spending adds up
+      Given I signed up as "learner" with "learner@example.com"
+      And I saved the OpenAI key "sk-live-000000000000000007Xa2" with a monthly limit of 500 cents
+      When the app records 120 cents of OpenAI spending for me
+      And the app records 30 cents of OpenAI spending for me
+      Then my OpenAI key shows 150 cents spent
+
+    @accounts
+    Scenario: A new month starts from nothing
+      Given I signed up as "learner" with "learner@example.com"
+      And I saved the OpenAI key "sk-live-000000000000000007Xa2" with a monthly limit of 500 cents
+      And the app recorded 120 cents of OpenAI spending for me
+      When a new month begins
+      Then my OpenAI key shows 0 cents spent
+
+    Scenario: A finished generation records what it cost
+      Given the AI writes the note "Cell notes" saying "Cells divide." for 0.42 dollars
+      When I import "Cells are the unit of life." into home and only a note is generated
+      Then 42 cents of OpenAI spending were recorded for me
+
+    Scenario: An OpenAI answer in Ask records what it cost
+      Given OpenAI is chosen and answers "Cells are the unit of life." for 0.07 dollars
+      When I ask "What is a cell?"
+      Then 7 cents of OpenAI spending were recorded for me
+
+  Rule: AI work stops once a key's monthly limit is reached
+
+    @accounts
+    Scenario: Spending up to the limit closes the budget
+      Given I signed up as "learner" with "learner@example.com"
+      And I saved the OpenAI key "sk-live-000000000000000007Xa2" with a monthly limit of 100 cents
+      When the app records 100 cents of OpenAI spending for me
+      Then I may not spend more on OpenAI
+
+    @accounts
+    Scenario: Spending below the limit keeps the budget open
+      Given I signed up as "learner" with "learner@example.com"
+      And I saved the OpenAI key "sk-live-000000000000000007Xa2" with a monthly limit of 100 cents
+      When the app records 99 cents of OpenAI spending for me
+      Then I may still spend on OpenAI
+
+    @accounts
+    Scenario: Spending without a saved key is never limited
+      Given I signed up as "learner" with "learner@example.com"
+      When the app records 5000 cents of OpenAI spending for me
+      Then I may still spend on OpenAI
+
+    Scenario: An import is refused once the limit is reached
+      Given my OpenAI budget is used up
+      When I import "Cells are the unit of life." into home asking for a note
+      Then I am told "Your monthly OpenAI limit is reached."
+
+    Scenario: Ask is refused once the limit is reached
+      Given OpenAI is chosen and answers "Cells are the unit of life."
+      And my OpenAI budget is used up
+      When I ask "What is a cell?"
+      Then I am told "Your monthly OpenAI limit is reached."
+
+    @ui
+    Scenario: Ask in the app explains a reached limit
+      Given Ask is refused with "Your monthly OpenAI limit is reached."
+      When I ask "What is a cell?" in the app
+      Then the app shows "Your monthly OpenAI limit is reached."
+
   Rule: My theme is remembered
 
     @accounts

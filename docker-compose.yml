@@ -24,6 +24,7 @@ x-content-service: &content-service
     - OPENAI_API_KEY=${OPENAI_API_KEY}
     - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
     - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    - ACCOUNT_SERVICE_URL=http://user-service:8000
   depends_on:
     content-migrations:
       condition: service_completed_successfully

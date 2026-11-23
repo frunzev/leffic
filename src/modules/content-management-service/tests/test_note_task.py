@@ -65,7 +65,9 @@ def _run_note(
         mock.patch.object(generation_tasks, "SessionLocal", sessions),
     ):
         return generation_tasks._generate_note_task(
-            ai_model=model,
+            requester=generation_tasks.GenerationRequester(
+                user_id=USER_ID, ai_model=model
+            ),
             extracted_text=_TEXT,
             folder_id=USER_ID,
             source_kind="topic",

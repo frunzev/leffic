@@ -76,7 +76,9 @@ def _generate(
         mock.patch.object(generation_tasks, "SessionLocal", sessions),
     ):
         result = generation_tasks._generate_flashcards_of_type_task(
-            ai_model=model,
+            requester=generation_tasks.GenerationRequester(
+                user_id=USER_ID, ai_model=model
+            ),
             extracted_text=_TEXT,
             deck_id=deck_id,
             flashcard_type=flashcard_type,

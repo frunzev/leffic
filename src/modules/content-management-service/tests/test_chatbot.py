@@ -20,10 +20,10 @@ class RecordingAi:
 
     def get_ai_res_hist(
         self, system_prompt: str, history: list[object]
-    ) -> str:
+    ) -> tuple[str, float | None]:
         self.histories.append(history)
 
-        return f"answered {len(history)} for {len(system_prompt)}"
+        return f"answered {len(history)} for {len(system_prompt)}", None
 
 
 class RecordingFactory:

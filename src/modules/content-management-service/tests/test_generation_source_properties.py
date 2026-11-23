@@ -9,23 +9,23 @@ from features.study_units_generation import generation_router
 from features.study_units_generation.generation_request import (
     FlashcardsMetadata,
     GenerationRequest,
+    SourceKind,
     TestMetadata,
 )
 from features.study_units_generation.generation_router import (
     _queued_flashcards,
     _queued_tasks,
-)
-from features.study_units_generation.study_unit_source import (
-    StudyUnitSource,
+    _requester,
+    _source,
 )
 from shared.models import FlashcardDeck, Test
 from tests.folder_seeding import seeded_folder
 from tests.property_fakes import RecordingQueuedTask
-from tests.support import in_memory_sessions
+from tests.support import USER_ID, in_memory_sessions
 from tests.task_token_support import TASK_TOKENS
 
 _SESSIONS = in_memory_sessions()
-_NO_SOURCE = StudyUnitSource(kind=None, reference=None)
+_SOURCE_KINDS: tuple[SourceKind, ...] = ("file", "link", "topic", "text")
 
 
 @settings(max_examples=25, deadline=None)
@@ -49,9 +49,9 @@ def test__queued_flashcards_property_falls_back_to_the_default_settings(
         ):
             _ = _queued_flashcards(
                 request_data,
+                USER_ID,
                 str(folder_id),
                 session,
-                _NO_SOURCE,
                 TASK_TOKENS,
             )
 
@@ -80,17 +80,20 @@ def test__queued_tasks_property_stamps_the_source_on_what_it_creates(
     with _SESSIONS() as session:
         folder_id = seeded_folder(session, owner, {})
 
-        with mock.patch.object(
-            generation_router,
-            "generate_flashcards_of_type_task",
-            queued_task,
-        ), mock.patch.object(
-            generation_router,
-            "generate_test_items_of_type_task",
-            queued_task,
+        with (
+            mock.patch.object(
+                generation_router,
+                "generate_flashcards_of_type_task",
+                queued_task,
+            ),
+            mock.patch.object(
+                generation_router,
+                "generate_test_items_of_type_task",
+                queued_task,
+            ),
         ):
             queued = _queued_tasks(
-                request_data, str(folder_id), session, TASK_TOKENS
+                request_data, USER_ID, str(folder_id), session, TASK_TOKENS
             )
 
         deck = session.get(
@@ -104,3 +107,36 @@ def test__queued_tasks_property_stamps_the_source_on_what_it_creates(
     assert created is not None
     assert created.source_kind == "link"
     assert created.source_reference == "https://example.com/x"
+
+
+@given(
+    source_kind=st.one_of(st.none(), st.sampled_from(_SOURCE_KINDS)),
+    source_reference=st.one_of(st.none(), st.text(max_size=20)),
+)
+def test__source_property_keeps_where_the_text_came_from(
+    source_kind: SourceKind | None, source_reference: str | None
+) -> None:
+    request_data = GenerationRequest(
+        text="material",
+        source_kind=source_kind,
+        source_reference=source_reference,
+    )
+
+    source = _source(request_data)
+
+    assert source.kind == source_kind
+    assert source.reference == source_reference
+
+
+@given(
+    user_id=st.uuids().map(str),
+    ai_model=st.one_of(st.none(), st.sampled_from(["gpt-4.1-nano"])),
+)
+def test__requester_property_names_who_pays_and_which_model_answers(
+    user_id: str, ai_model: str | None
+) -> None:
+    request_data = GenerationRequest(text="material", ai_model=ai_model)
+
+    requester = _requester(request_data, user_id)
+
+    assert requester == {"user_id": user_id, "ai_model": ai_model}

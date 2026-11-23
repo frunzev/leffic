@@ -7,6 +7,7 @@ from hypothesis import strategies as st
 from features.study_units_generation import generation_tasks
 from features.study_units_generation.generation_tasks import (
     FlashcardGenerationSettings,
+    GenerationRequester,
     _generate_flashcards_of_type_task,
     _generate_note_task,
     _generate_test_items_of_type_task,
@@ -17,6 +18,7 @@ from tests.property_fakes import (
     RecordingAppend,
     RecordingSave,
 )
+from tests.support import USER_ID
 
 _NAMES = st.text(min_size=1, max_size=10)
 _CARD = st.fixed_dictionaries({"front": st.text(max_size=6)})
@@ -62,7 +64,7 @@ def test__generate_flashcards_of_type_task_property_reports_its_type(
         generation_tasks, "append_flashcards", appending
     ), mock.patch.object(generation_tasks, "name_deck_once"):
         reported = _generate_flashcards_of_type_task(
-            ai_model=None,
+            requester=GenerationRequester(user_id=USER_ID, ai_model=None),
             extracted_text="text",
             deck_id=str(deck_id),
             flashcard_type=flashcard_type,
@@ -104,7 +106,7 @@ def test__generate_test_items_of_type_task_property_reports_its_type(
         generation_tasks, "append_test_items", appending
     ), mock.patch.object(generation_tasks, "name_test_once"):
         reported = _generate_test_items_of_type_task(
-            ai_model=None,
+            requester=GenerationRequester(user_id=USER_ID, ai_model=None),
             extracted_text="text",
             test_id=str(test_id),
             item_type=item_type,
@@ -138,7 +140,7 @@ def test__generate_note_task_property_reports_the_note_it_saved(
         generation_tasks, "SessionLocal"
     ), mock.patch.object(generation_tasks, "save_note", saving):
         reported = _generate_note_task(
-                ai_model=None,
+                requester=GenerationRequester(user_id=USER_ID, ai_model=None),
                 extracted_text="text",
                 folder_id=str(uuid.uuid4()),
                 source_kind=None,

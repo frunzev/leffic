@@ -17,13 +17,14 @@ _ATTEMPTS = 2
 _ALL_ATTEMPTS_FAILED = "The AI model did not answer"
 
 AiMessage = ResponseInputItemParam
+PricedAnswer = tuple[str, float | None]
 
 
 class AIManager(JsonAnswerer, ABC):
     @abstractmethod
     def get_ai_res_hist(
         self, system_prompt: str, history: list[AiMessage]
-    ) -> str: ...
+    ) -> PricedAnswer: ...
 
 
 class RequestCost:
@@ -80,13 +81,14 @@ class OpenAIManager(AIManager):
     @override
     def get_ai_res_hist(
         self, system_prompt: str, history: list[AiMessage]
-    ) -> str:
+    ) -> PricedAnswer:
         conversation: list[AiMessage] = [
             EasyInputMessageParam(role="developer", content=system_prompt),
             *history,
         ]
+        response = self._answer(conversation)
 
-        return self._answer(conversation).output_text
+        return response.output_text, self.request_cost.of(response)
 
     def _answer(self, history: list[AiMessage]) -> Response:
         return self.client.responses.create(

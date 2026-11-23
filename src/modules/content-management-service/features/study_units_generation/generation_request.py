@@ -4,6 +4,8 @@ from pydantic import BaseModel, Field, PositiveInt, model_validator
 
 _UNREQUESTED_AMOUNT = "An amount was given for types not requested:"
 
+SourceKind = Literal["file", "link", "topic", "text"]
+
 
 class UnrequestedAmountError(ValueError):
     def __init__(self, unrequested_types: list[str]) -> None:
@@ -48,7 +50,7 @@ class TestMetadata(
 class GenerationRequest(BaseModel):
     text: str
     folder_id: str | None = None
-    source_kind: Literal["file", "link", "topic", "text"] | None = None
+    source_kind: SourceKind | None = None
     source_reference: str | None = None
     flashcards: FlashcardsMetadata | None = None
     note: NoteMetadata | None = None

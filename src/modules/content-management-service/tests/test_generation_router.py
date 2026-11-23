@@ -109,7 +109,7 @@ def test_a_note_is_queued_with_the_reviewed_text(
         "note_task_id": TASK_TOKENS.signed_task_id("note-1", _FOLDER_ID)
     }
     assert note_task.calls[0] == {
-        "ai_model": "gpt-4.1-nano",
+        "requester": {"user_id": USER_ID, "ai_model": "gpt-4.1-nano"},
         "extracted_text": _TEXT,
         "folder_id": _FOLDER_ID,
         "source_kind": "link",

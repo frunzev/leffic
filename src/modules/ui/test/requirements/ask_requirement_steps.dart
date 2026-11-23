@@ -12,6 +12,7 @@ import 'step_definition.dart';
 const String _chat = '/chat';
 const String _send = 'Send';
 const int _unavailableStatus = 503;
+const int _refusedStatus = 402;
 const Size _panelSize = Size(380, 900);
 
 Future<void> _answerQuestions(
@@ -28,6 +29,14 @@ Future<void> _makeAskUnavailable(
   List<String> values,
 ) async {
   world.replies[_chat] = failWith(_unavailableStatus, values.single);
+}
+
+Future<void> _refuseAsk(
+  WidgetTester tester,
+  UiWorld world,
+  List<String> values,
+) async {
+  world.replies[_chat] = failWith(_refusedStatus, values.single);
 }
 
 Widget _askPanel(
@@ -84,5 +93,6 @@ final List<StepDefinition> askStepDefinitions = [
     RegExp(r'^Ask is unavailable with "(.+)"$'),
     _makeAskUnavailable,
   ),
+  StepDefinition('Given', RegExp(r'^Ask is refused with "(.+)"$'), _refuseAsk),
   StepDefinition('When', RegExp(r'^I ask "(.+)" in the app$'), _ask),
 ];

@@ -8,4 +8,5 @@ pytest_plugins = [
     "tests.requirements.session_steps",
     "tests.requirements.account_settings_steps",
     "tests.requirements.key_steps",
+    "tests.requirements.spending_steps",
 ]
